@@ -7,6 +7,7 @@ import os
 from natsort import natsorted
 from chainconsumer import ChainConsumer
 from scipy.stats import gaussian_kde
+from Handler.helper_classes import MidpointNormalize
 
 
 def plot_histo(data_frame, cols):
@@ -493,3 +494,41 @@ def make_gif(frame_folder, name_save_folder, fps=10):
         image = imageio.imread(f"{frame_folder}/{filename}")
         images_data.append(image)
     imageio.mimwrite(uri=f"{name_save_folder}", ims=images_data, format='.gif', duration=int(1000*1/fps))
+
+
+def plot_balrog_spencer(data_frame):
+    xlim = [15, 26]
+    ylim = [-8, 4]
+
+    vmin, vmax = -2.5, 5
+
+    bindx = dict(zip('griz', range(4)))
+    b = 'i'
+    bi = bindx[b]
+
+    print('Plotting sample...')
+
+    N = 10  # Only plot 10% to run faster
+
+    T_err = data_frame['unsheared/T'] - data_frame['BDF_T']
+    T_err = np.log10(np.abs(T_err))
+
+    x = data_frame['BDF_MAG_DERED_CALIB_R'][::N]
+    y = data_frame['unsheared/mag_r'][::N] - x
+
+    cmap = 'coolwarm'
+    plt.scatter(x, y, s=7, c=T_err[::N], cmap=cmap, norm=MidpointNormalize(midpoint=0, vmin=vmin, vmax=vmax))
+
+    # Reference lines
+    plt.axhline(-1, lw=3, ls=':', c='k')
+    plt.axhline(0, lw=3, ls='--', c='k')
+    plt.axhline(1, lw=3, ls=':', c='k')
+
+    plt.xlim(xlim)
+    plt.ylim(ylim)
+
+    plt.xlabel('True {}-mag (bdf)'.format(b))
+    plt.ylabel('Measured-True {}-mag (cm-bdf)'.format(b))
+    cbar = plt.colorbar()
+    cbar.set_label('log10(|Meas-True T|)', rotation=270, labelpad=25)
+    plt.show()

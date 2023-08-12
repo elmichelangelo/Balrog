@@ -1,95 +1,11 @@
-import matplotlib.pyplot as plt
-from scipy.stats import gaussian_kde
-from chainconsumer import ChainConsumer
-# from natsort import natsorted
-# import imageio
+import pickle
 import numpy as np
 from sklearn.preprocessing import PowerTransformer
-# import torch
-import os
-# import healpy as hp
 import pandas as pd
+from Handler.plot_functions import *
 """import warnings
 
 warnings.filterwarnings("error")"""
-
-
-# def plot_chain(data_frame, plot_name, max_ticks=5, shade_alpha=0.8, tick_font_size=12, label_font_size=12, columns=None,
-#                parameter=None, extends=None):
-#     """
-#
-#     :param extends: extents={
-#                 "mag r": (17.5, 26),
-#                 "mag i": (17.5, 26),
-#                 "mag z": (17.5, 26),
-#                 "snr": (-11, 55),
-#                 "size ratio": (-1.5, 4),
-#                 "T": (-1, 2.5)
-#             }
-#     :param label_font_size:
-#     :param tick_font_size:
-#     :param shade_alpha:
-#     :param max_ticks:
-#     :param plot_name: "generated observed properties: chat*"
-#     :param data_frame:
-#     :param columns: Mutable list, default values are columns = [
-#             "unsheared/mag_r",
-#             "unsheared/mag_i",
-#             "unsheared/mag_z",
-#             "unsheared/snr",
-#             "unsheared/size_ratio",
-#             "unsheared/T"
-#         ]
-#     :param parameter: Mutable list, default values are parameter = [
-#                 "mag r",
-#                 "mag i",
-#                 "mag z",
-#                 "snr",              # signal-noise      Range: min=0.3795, max=38924.4662
-#                 "size ratio",       # T/psfrec_T        Range: min=-0.8636, max=4346136.5645
-#                 "T"                 # T=<x^2>+<y^2>     Range: min=-0.6693, max=1430981.5103
-#             ]
-#     :return:
-#     """
-#     df_plot = pd.DataFrame({})
-#
-#     if columns is None:
-#         columns = [
-#             "unsheared/mag_r",
-#             "unsheared/mag_i",
-#             "unsheared/mag_z",
-#             "unsheared/snr",
-#             "unsheared/size_ratio",
-#             "unsheared/T"
-#         ]
-#
-#     if parameter is None:
-#         parameter = [
-#                 "mag r",
-#                 "mag i",
-#                 "mag z",
-#                 "snr",              # signal-noise      Range: min=0.3795, max=38924.4662
-#                 "size ratio",       # T/psfrec_T        Range: min=-0.8636, max=4346136.5645
-#                 "T"                 # T=<x^2>+<y^2>     Range: min=-0.6693, max=1430981.5103
-#             ]
-#
-#     for col in columns:
-#         df_plot[col] = np.array(data_frame[col])
-#
-#     chain = ChainConsumer()
-#     chain.add_chain(df_plot.to_numpy(), parameters=parameter, name=plot_name)
-#     chain.configure(
-#         max_ticks=max_ticks,
-#         shade_alpha=shade_alpha,
-#         tick_font_size=tick_font_size,
-#         label_font_size=label_font_size
-#     )
-#     # if extends is not None:
-#     chain.plotter.plot(
-#         figsize="page",
-#         extents=extends
-#     )
-#     plt.show()
-#     plt.clf()
 
 
 def load_healpix(path2file, hp_show=False, nest=True, partial=False, field=None):
@@ -98,7 +14,9 @@ def load_healpix(path2file, hp_show=False, nest=True, partial=False, field=None)
     # Returns:
 
     """
-    """if field is None:
+    """
+    import healpy as hp
+    if field is None:
         hp_map = hp.read_map(path2file, nest=nest, partial=partial)
     else:
         hp_map = hp.read_map(path2file, nest=nest, partial=partial, field=field)
@@ -114,7 +32,8 @@ def load_healpix(path2file, hp_show=False, nest=True, partial=False, field=None)
         hp.graticule()
         plt.show()
         
-    return hp_map"""
+    return hp_map
+    """
 
 
 def match_skybrite_2_footprint(path2footprint, path2skybrite, hp_show=False, nest_footprint=True, nest_skybrite=True,
@@ -125,7 +44,9 @@ def match_skybrite_2_footprint(path2footprint, path2skybrite, hp_show=False, nes
     Returns:
 
     """
-    """hp_map_footprint = load_healpix(
+    """
+    import healpy as hp
+    hp_map_footprint = load_healpix(
         path2file=path2footprint,
         hp_show=hp_show,
         nest=nest_footprint,
@@ -142,41 +63,8 @@ def match_skybrite_2_footprint(path2footprint, path2skybrite, hp_show=False, nes
     )
     sky_in_footprint = hp_map_skybrite[:, hp_map_footprint != hp.UNSEEN]
     good_indices = sky_in_footprint[0, :].astype(int)
-    return np.column_stack((good_indices, sky_in_footprint[1]))"""
-
-
-# def generate_normal_distribution(size, mu, sigma, num=1, as_tensor=True):
-#     """
-#     Generate uniform distributed random data for discriminator.
-#
-#     Args:
-#         size: size of the tensor
-#
-#     Returns:
-#         random data as torch tensor
-#     """
-#     # random_data = torch.randn(size)
-#
-#     if as_tensor is False:
-#         return np.random.normal(mu, sigma, size=(size, num))
-#     return torch.FloatTensor([np.random.normal(mu, sigma, size=(size, num))[0][0]])
-#
-#
-# def generate_uniform_distribution(size, low, high, num=1, as_tensor=True):
-#     """
-#     Generate normal distributed random data for generator.
-#
-#     Args:
-#         size: size of the tensor
-#
-#     Returns:
-#         random data as torch tensor
-#     """
-#     # random_data = torch.rand(size)
-#
-#     if not as_tensor:
-#         return np.random.uniform(low, high, size=(num, size))
-#     return torch.FloatTensor(np.random.uniform(low, high, size=(num, size)))
+    return np.column_stack((good_indices, sky_in_footprint[1]))
+    """
 
 
 def luptize(flux, var, s, zp):
@@ -337,16 +225,8 @@ def calc_mag(data_frame, flux_col, mag_col, bins):
     return data_frame
 
 
-def calc_color(data_frame, mag_type, flux_col, mag_col, bins, plot_data=False):
-    """
-
-    :param data_frame:
-    :param mag_type:
-    :param flux_col:
-    :param mag_col:
-    :param bins:
-    :return:
-    """
+def calc_color(data_frame, mag_type, flux_col, mag_col, bins, plot_name, plot_data=False):
+    """"""
 
     if isinstance(mag_col, tuple):
         mag = mag_col[0]
@@ -383,7 +263,20 @@ def calc_color(data_frame, mag_type, flux_col, mag_col, bins, plot_data=False):
             lst_mag_cols.append(f"{mag}_{next_b}")
             lst_mag_parameter.append(f"{mag_type[0]} {next_b}")
             break
-    return data_frame, lst_color_cols, lst_color_parameter, lst_mag_cols, lst_mag_parameter
+    if plot_data is True:
+        plot_chain(
+            data_frame=data_frame,
+            columns=lst_color_cols,
+            parameter=lst_color_parameter,
+            plot_name=f"color_{plot_name}"
+        )
+        plot_chain(
+            data_frame=data_frame,
+            columns=lst_mag_cols,
+            parameter=lst_mag_parameter,
+            plot_name=f"mag_{plot_name}"
+        )
+    return data_frame
 
 
 def replace_nan_with_gaussian(val, loc, scale):
@@ -435,7 +328,7 @@ def replace_and_transform_data(data_frame, columns):
 
 
 def mag2flux(magnitude, zero_pt=30):
-    # convert flux to magnitude
+    # convert magnitude to flux
     try:
         flux = 10**((zero_pt-magnitude)/2.5)
         return flux
@@ -445,84 +338,25 @@ def mag2flux(magnitude, zero_pt=30):
 
 def flux2mag(flux, zero_pt=30, clip=0.001):
     # convert flux to magnitude
-    """lst_mag = []
-    for f in flux:
-        try:
-            magnitude = zero_pt - 2.5 * np.log10(f)
-            lst_mag.append(magnitude)
-        except RuntimeWarning:
-            print("Warning")
-            # lst_mag.append(-100)"""
     if clip is None:
         return zero_pt - 2.5 * np.log10(flux)
     return zero_pt - 2.5 * np.log10(flux.clip(clip))
-    # return np.array(lst_mag)
 
 
-# def unsheared_mag_cut(data_frame):
-#     """"""
-#     mag_cuts = (
-#             (18 < data_frame["unsheared/mag_i"]) &
-#             (data_frame["unsheared/mag_i"] < 23.5) &
-#             (15 < data_frame["unsheared/mag_r"]) &
-#             (data_frame["unsheared/mag_r"] < 26) &
-#             (15< data_frame["unsheared/mag_z"]) &
-#             (data_frame["unsheared/mag_z"] < 26) &
-#             (-1.5 < data_frame["unsheared/mag_r"] - data_frame["unsheared/mag_i"]) &
-#             (data_frame["unsheared/mag_r"] - data_frame["unsheared/mag_i"] < 4) &
-#             (-4 < data_frame["unsheared/mag_z"] - data_frame["unsheared/mag_i"]) &
-#             (data_frame["unsheared/mag_z"] - data_frame["unsheared/mag_i"] < 1.5)
-#     )
-#     data_frame = data_frame[mag_cuts]
-#     shear_cuts = (
-#             (10 < data_frame["unsheared/snr"]) &
-#             (data_frame["unsheared/snr"] < 1000) &
-#             (0.5 < data_frame["unsheared/size_ratio"]) &
-#             (data_frame["unsheared/T"] < 10)
-#     )
-#     data_frame = data_frame[shear_cuts]
-#     data_frame = data_frame[~((2 < data_frame["unsheared/T"]) & (data_frame["unsheared/snr"] < 30))]
-#     return data_frame
-#
-#
-# def bdf_mag_cuts(data_frame):
-#     """"""
-#     bdf_cuts = (
-#         (data_frame["BDF_MAG_ERR_DERED_CALIB_J"] < 37.5) &
-#         (10 < data_frame["BDF_MAG_ERR_DERED_CALIB_J"]) &
-#         (data_frame["BDF_MAG_ERR_DERED_CALIB_H"] < 37.5) &
-#         (10 < data_frame["BDF_MAG_ERR_DERED_CALIB_H"]) &
-#         (data_frame["BDF_MAG_ERR_DERED_CALIB_K"] < 37.5) &
-#         (10 < data_frame["BDF_MAG_ERR_DERED_CALIB_K"])
-#     )
-#     data_frame = data_frame[bdf_cuts]
-#     return data_frame
-#
-#
-# def metacal_cuts(data_frame):
-#     """"""
-#     print("Apply mcal cuts")
-#     mcal_cuts = (data_frame["unsheared/extended_class_sof"] >= 0) & (data_frame["unsheared/flags_gold"] < 2)
-#     data_frame = data_frame[mcal_cuts]
-#     print('Length of mcal catalog after applying cuts: {}'.format(len(data_frame)))
-#     return data_frame
-#
-#
-# def detection_cuts(data_frame):
-#     """"""
-#     print("Apply detection cuts")
-#     detect_cuts = (data_frame["match_flag_1.5_asec"] < 2) & \
-#                   (data_frame["flags_foreground"] == 0) & \
-#                   (data_frame["flags_badregions"] < 2) & \
-#                   (data_frame["flags_footprint"] == 1)
-#     data_frame = data_frame[detect_cuts]
-#     print('Length of detection catalog after applying cuts: {}'.format(len(data_frame)))
-#     return data_frame
-#
-#
-# def airmass_cut(data_frame):
-#     """"""
-#     print('Cut mcal_detect_df_survey catalog so that AIRMASS_WMEAN_R is not null')
-#     data_frame = data_frame[pd.notnull(data_frame["AIRMASS_WMEAN_R"])]
-#     return data_frame
+def open_all_balrog_dataset(path_all_balrog_data):
+    """"""
+    infile = open(path_all_balrog_data, 'rb')
+    # load pickle as pandas dataframe
+    df_balrog = pd.DataFrame(pickle.load(infile, encoding='latin1'))
+    # close file
+    infile.close()
+    return df_balrog
 
+
+def save_balrog_subset(data_frame, path_balrog_subset, protocol):
+    """"""
+    if protocol == 2:
+        with open(path_balrog_subset, "wb") as f:
+            pickle.dump(data_frame.to_dict(), f, protocol=2)
+    else:
+        data_frame.to_pickle(path_balrog_subset)
