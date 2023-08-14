@@ -8,8 +8,8 @@ import sys
 
 def create_balrog_subset(path_all_balrog_data, path_save, name_save_file, number_of_samples, only_detected,
                          apply_fill_na, apply_replace_defaults, apply_object_cut, apply_flag_cut,
-                         apply_unsheared_mag_cut, apply_unsheared_shear_cut, apply_airmass_cut, bdf_bins,
-                         unsheared_bins, fill_na, replace_defaults, protocol=None, plot_color=False):
+                         apply_unsheared_mag_cut, apply_unsheared_shear_cut, apply_airmass_cut, apply_binary_cut,
+                         bdf_bins, unsheared_bins, fill_na, replace_defaults, protocol=None, plot_color=False):
     """"""
     df_balrog = open_all_balrog_dataset(path_all_balrog_data)
     df_balrog.rename(
@@ -29,6 +29,8 @@ def create_balrog_subset(path_all_balrog_data, path_save, name_save_file, number
         print(f"start fill na default")
         for col in fill_na.keys():
             df_balrog[col].fillna(fill_na[col][0])
+    elif apply_fill_na is None:
+        print("No fill na")
     print(df_balrog.isna().sum())
 
     if apply_replace_defaults == "Gauss":
@@ -37,6 +39,8 @@ def create_balrog_subset(path_all_balrog_data, path_save, name_save_file, number
     elif apply_replace_defaults == "Default":
         print(f"start replace default default")
         df_balrog = replace_values(df_balrog, replace_defaults)
+    elif apply_replace_defaults is None:
+        print("No default replace")
 
     df_balrog = calc_color(
         data_frame=df_balrog,
@@ -79,16 +83,18 @@ def create_balrog_subset(path_all_balrog_data, path_save, name_save_file, number
     if only_detected is True:
         df_balrog = df_balrog[df_balrog["detected"] == 1]
         print(f"length of only detected balrog objects {len(df_balrog)}")
-    if apply_object_cut is not True:
+    if apply_object_cut is True:
         df_balrog = unsheared_object_cuts(data_frame=df_balrog)
-    if apply_flag_cut is not True:
+    if apply_flag_cut is True:
         df_balrog = flag_cuts(data_frame=df_balrog)
-    if apply_unsheared_mag_cut is not True:
+    if apply_unsheared_mag_cut is True:
         df_balrog = unsheared_mag_cut(data_frame=df_balrog)
-    if apply_unsheared_shear_cut is not True:
+    if apply_unsheared_shear_cut is True:
         df_balrog = unsheared_shear_cuts(data_frame=df_balrog)
-    if apply_airmass_cut is not True:
+    if apply_airmass_cut is True:
         df_balrog = airmass_cut(data_frame=df_balrog)
+    if apply_binary_cut is True:
+        df_balrog = binary_cut(data_frame=df_balrog)
     print(f"length of catalog after applying unsheared cuts {len(df_balrog)}")
 
     if number_of_samples is None:
@@ -97,8 +103,55 @@ def create_balrog_subset(path_all_balrog_data, path_save, name_save_file, number
     df_balrog_subset = df_balrog.sample(number_of_samples, ignore_index=True, replace=False)
     path_balrog_subset = f"{path_save}/{name_save_file}_{number_of_samples}.pkl"
 
-    plot_balrog_spencer(df_balrog)
-    exit()
+
+    ####################################################################################################################
+    # Todo size_ratio macht schwierigkeiten beim lernen. Was kann ich machen, damit das besser wird?
+    # plot_histo(
+    #     data_frame=df_balrog,
+    #     cols=[
+    #         "unsheared/size_ratio"
+    #     ],
+    # )
+    # plot_chain(
+    #     data_frame=df_balrog,
+    #     plot_name="hist_t",
+    #     columns=[
+    #         "unsheared/T",
+    #         "unsheared/size_ratio"
+    #     ],
+    #     parameter=[
+    #         "T",
+    #         "size_ratio"
+    #     ]
+    # )
+    # yj_transform_data(
+    #     data_frame=df_balrog,
+    #     columns=[
+    #         "unsheared/T"
+    #     ]
+    # )
+    #
+    # plot_histo(
+    #     data_frame=df_balrog,
+    #     cols=[
+    #         "unsheared/size_ratio"
+    #     ],
+    # )
+    # plot_chain(
+    #     data_frame=df_balrog,
+    #     plot_name="hist_t",
+    #     columns=[
+    #         "unsheared/T",
+    #         "unsheared/size_ratio"
+    #     ],
+    #     parameter=[
+    #         "T",
+    #         "size_ratio"
+    #     ]
+    # )
+    # exit()
+
+    ####################################################################################################################
 
     save_balrog_subset(
         data_frame=df_balrog_subset,
@@ -109,12 +162,12 @@ def create_balrog_subset(path_all_balrog_data, path_save, name_save_file, number
 
 if __name__ == '__main__':
     path = os.path.abspath(sys.path[0])
-    no_samples = 10000  # int(3E6)  # int(250000)  # int(250000) # 20000 # int(8E6)
+    no_samples = 250000  # int(3E6)  # int(250000)  # int(250000) # 20000 # int(8E6)
 
     dict_fill_na = {
         'unsheared/snr': (-10, 2.0),
         'unsheared/T': (-10, 2.0),
-        'unsheared/size_ratio': (-1, 2.0),
+        'unsheared/size_ratio': (-10, 5.0),
         'AIRMASS_WMEAN_R': (-10, 2.0),
         'AIRMASS_WMEAN_I': (-10, 2.0),
         'AIRMASS_WMEAN_Z': (-10, 2.0),
@@ -154,16 +207,17 @@ if __name__ == '__main__':
     create_balrog_subset(
         path_all_balrog_data=f"{path}/Data/balrog_cat_mcal_detect_df_wo_cuts_26442133.pkl",
         path_save=f"{path}/Output",
-        name_save_file="balrog_mag_lupt_wo_cuts_w_fillna_gauss",
+        name_save_file="balrog_w_cuts",
         number_of_samples=no_samples,
         only_detected=True,
-        apply_fill_na="Default",
-        apply_replace_defaults="Default",
-        apply_object_cut=True,
-        apply_flag_cut=True,
-        apply_unsheared_mag_cut=True,
-        apply_unsheared_shear_cut=True,
-        apply_airmass_cut=True,
+        apply_fill_na="Gauss",  # "Default"
+        apply_replace_defaults="Default",  # "Default"
+        apply_object_cut=False,
+        apply_flag_cut=False,
+        apply_unsheared_mag_cut=False,
+        apply_unsheared_shear_cut=False,
+        apply_airmass_cut=False,
+        apply_binary_cut=False,
         bdf_bins=["U", "G", "R", "I", "Z", "J", "H", "K"],
         unsheared_bins=["r", "i", "z"],
         fill_na=dict_fill_na,

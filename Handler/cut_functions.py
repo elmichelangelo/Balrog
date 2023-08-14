@@ -1,4 +1,6 @@
+from Handler.helper_functions import *
 import pandas as pd
+import numpy as np
 
 
 def unsheared_object_cuts(data_frame):
@@ -38,7 +40,7 @@ def unsheared_mag_cut(data_frame):
             (data_frame["unsheared/mag_i"] < 23.5) &
             (15 < data_frame["unsheared/mag_r"]) &
             (data_frame["unsheared/mag_r"] < 26) &
-            (15< data_frame["unsheared/mag_z"]) &
+            (15 < data_frame["unsheared/mag_z"]) &
             (data_frame["unsheared/mag_z"] < 26) &
             (-1.5 < data_frame["unsheared/mag_r"] - data_frame["unsheared/mag_i"]) &
             (data_frame["unsheared/mag_r"] - data_frame["unsheared/mag_i"] < 4) &
@@ -64,3 +66,30 @@ def unsheared_shear_cuts(data_frame):
     print('Length of catalog after applying unsheared shear cuts: {}'.format(len(data_frame)))
     return data_frame
 
+
+def mask_cuts(data_frame, master):
+    """"""
+    import healpy as hp
+    print("define mask")
+    theta = (np.pi / 180.) * (90. - data_frame['unsheared/dec'].to_numpy())
+    phi = (np.pi / 180.) * data_frame['unsheared/ra'].to_numpy()
+    gpix = hp.ang2pix(16384, theta, phi, nest=True)
+    mask_cut = np.in1d(gpix // (hp.nside2npix(16384) // hp.nside2npix(4096)), master['index/mask/hpix'][:],
+                       assume_unique=False)
+    npass = np.sum(mask_cut)
+    print('pass: ', npass)
+    print('fail: ', len(mask_cut) - npass)
+
+
+def binary_cut(data_frame):
+    """"""
+    highe_cut = np.greater(np.sqrt(np.power(data_frame['unsheared/e_1'], 2.) + np.power(data_frame['unsheared/e_2'], 2)), 0.8)
+    c = 22.5
+    m = 3.5
+    magT_cut = np.log10(data_frame['unsheared/T']) < (c - flux2mag(data_frame['unsheared/flux_r'])) / m
+    binaries = highe_cut * magT_cut
+
+    print("perform binaries cut")
+    data_frame = data_frame[~binaries]
+    print('len w/ binaries', len(data_frame))
+    return data_frame

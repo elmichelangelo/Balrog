@@ -6,7 +6,9 @@ from astropy.table import Table
 import h5py
 import fitsio
 import numpy as np
-from Handler.cut_functions import *
+import pandas as pd
+import healpy as hp
+# from Handler.cut_functions import *
 
 
 """
@@ -171,20 +173,6 @@ def merge_catalogs(metacal=None, deep_field=None, detection=None, survey=None, o
     df_merged = pd.merge(df_merged, survey, on='HPIX_4096', how="left")
     print('Length of merged mcal_detect_df_survey catalog: {}'.format(len(df_merged)))
     print(df_merged.isnull().sum())
-
-    if only_detected is True:
-        df_balrog = df_balrog[df_balrog["detected"] == 1]
-        print(f"length of only detected balrog objects {len(df_balrog)}")
-
-    if apply_airmass_cut is True:
-        df_merged = airmass_cut(df_merged)
-        print(df_merged.isnull().sum())
-    if apply_unsheared_mag_cut is not True:
-        df_merged = unsheared_mag_cut(data_frame=df_merged)
-        print(df_merged.isnull().sum())
-    if apply_unsheared_shear_cut is not True:
-        df_merged = unsheared_shear_cuts(data_frame=df_merged)
-        print(df_merged.isnull().sum())
     return df_merged
 
 
@@ -302,7 +290,9 @@ if __name__ == "__main__":
         'unsheared/T',
         'unsheared/weight',
         'unsheared/extended_class_sof',
-        'unsheared/flags_gold'
+        'unsheared/flags_gold',
+        'unsheared/e_1',
+        'unsheared/e_2'
     ]
 
     main(

@@ -316,7 +316,23 @@ def replace_values_with_gaussian(data_frame, replace_value):
     return data_frame
 
 
-def replace_and_transform_data(data_frame, columns):
+# def replace_values(data_frame, replace_value):
+#     for col in replace_value.keys():
+#         replace_value_index = None if replace_value[col] == "None" else replace_value[col]
+#         if replace_value_index is not None:
+#             replace_value_tuple = eval(replace_value_index)
+#             data_frame[col] = data_frame[col].replace(replace_value_tuple[0], replace_value_tuple[1])
+#     return data_frame
+
+
+def unreplace_values(data_frame, replace_value):
+    for col in replace_value.keys():
+        if replace_value[col] is not None:
+            data_frame[col] = data_frame[col].replace(replace_value[col][1], replace_value[col][0])
+    return data_frame
+
+
+def yj_transform_data(data_frame, columns):
     """"""
     dict_pt = {}
     for col in columns:
@@ -325,6 +341,14 @@ def replace_and_transform_data(data_frame, columns):
         data_frame[col] = pt.transform(np.array(data_frame[col]).reshape(-1, 1))
         dict_pt[f"{col} pt"] = pt
     return data_frame, dict_pt
+
+
+def yj_inverse_transform_data(data_frame, dict_pt, columns):
+    """"""
+    for col in columns:
+        pt = dict_pt[f"{col} pt"]
+        data_frame[col] = pt.inverse_transform(np.array(data_frame[col]).reshape(-1, 1)).ravel()
+    return data_frame
 
 
 def mag2flux(magnitude, zero_pt=30):

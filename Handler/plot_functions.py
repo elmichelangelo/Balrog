@@ -12,7 +12,9 @@ from Handler.helper_classes import MidpointNormalize
 
 def plot_histo(data_frame, cols):
     for col in cols:
-        sns.histplot(data_frame[col], stat="density", bins=100, kde=True)
+        sns.histplot(data_frame[col], stat="density", bins=50, kde=True)
+        plt.title(f"mean {data_frame[col].mean():.4f}, std {data_frame[col].std():.4f}")
+        plt.xlabel(col)
         plt.show()
 
 
@@ -497,6 +499,11 @@ def make_gif(frame_folder, name_save_folder, fps=10):
 
 
 def plot_balrog_spencer(data_frame):
+    import seaborn as sb
+    plt.style.use('seaborn')
+    sb.set_context("notebook", font_scale=1.5)
+    sb.set_style("whitegrid")
+
     xlim = [15, 26]
     ylim = [-8, 4]
 
@@ -513,8 +520,8 @@ def plot_balrog_spencer(data_frame):
     T_err = data_frame['unsheared/T'] - data_frame['BDF_T']
     T_err = np.log10(np.abs(T_err))
 
-    x = data_frame['BDF_MAG_DERED_CALIB_R'][::N]
-    y = data_frame['unsheared/mag_r'][::N] - x
+    x = data_frame['BDF_MAG_DERED_CALIB_I'][::N]
+    y = data_frame['unsheared/mag_i'][::N] - x
 
     cmap = 'coolwarm'
     plt.scatter(x, y, s=7, c=T_err[::N], cmap=cmap, norm=MidpointNormalize(midpoint=0, vmin=vmin, vmax=vmax))
