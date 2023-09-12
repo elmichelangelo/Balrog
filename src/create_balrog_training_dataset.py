@@ -85,25 +85,18 @@ def read_catalogs(path_metacal, path_detection, path_deep_field, path_survey, me
                 plt.show()
 
     if path_deep_field is not None:
-        ################################################################################################################
-        infile = open(path_deep_field, 'rb')
-        df_deep_field_all = pd.DataFrame(pickle.load(infile, encoding='latin1'))
-        df_deep_field = df_deep_field_all[deep_field_cols]
-        infile.close()
-
-        ################################################################################################################
         # Read fits file
-        # deep_field_data = Table(fitsio.read(path_deep_field).byteswap().newbyteorder())
+        deep_field_data = Table(fitsio.read(path_deep_field).byteswap().newbyteorder())
 
         # Add columns to DataFrame
-        # df_deep_field = pd.DataFrame()
-        # for i, col in enumerate(deep_field_cols):
-        #     print(i, col)
-        #     df_deep_field[col] = deep_field_data[col]
+        df_deep_field = pd.DataFrame()
+        for i, col in enumerate(deep_field_cols):
+            print(i, col)
+            df_deep_field[col] = deep_field_data[col]
 
         # Verbose
-        # print('Length of deep field catalog: {}'.format(len(df_deep_field)))
-        # print(df_deep_field.isnull().sum())
+        print('Length of deep field catalog: {}'.format(len(df_deep_field)))
+        print(df_deep_field.isnull().sum())
 
     if path_survey is not None:
         df_survey = pd.DataFrame()
@@ -296,7 +289,7 @@ if __name__ == "__main__":
     main(
         path_metacal=f"{path_data}/balrog_mcal_stack-y3v02-0-riz-noNB-mcal_y3-merged_v1.2.h5",
         path_detection=f"{path_data}/balrog_detection_catalog_sof_y3-merged_v1.2.fits",
-        path_deep_field=f"{path_data}/deep_ugriz.mof02_sn.jhk.ff04_c.jhk.ff02_052020_realerrors_May20calib.pkl",  # deep_field_err.fits
+        path_deep_field=f"{path_data}/deep_field_err.pkl",
         path_survey=f"{path_data}/sct2",
         path_save=f"{path_data}/balrog_cat_mcal_detect_reg_df_",
         metacal_cols=other_metacal_cols + ['unsheared/flux_{}'.format(i) for i in 'irz'] + ['unsheared/flux_err_{}'.format(i) for i in 'irz'],
@@ -316,9 +309,9 @@ if __name__ == "__main__":
             "ID",
             "RA",
             "DEC",
-            # "BDF_T",
-            # "BDF_G_0",
-            # "BDF_G_1",
+            "BDF_T",
+            "BDF_G_0",
+            "BDF_G_1",
             "BDF_FLUX_DERED_CALIB_U",
             "BDF_FLUX_DERED_CALIB_G",
             "BDF_FLUX_DERED_CALIB_R",
