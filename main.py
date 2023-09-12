@@ -1,5 +1,4 @@
 import pandas as pd
-
 from Handler.cut_functions import *
 from Handler.plot_functions import *
 from Handler.helper_functions import *
@@ -20,7 +19,7 @@ def create_balrog_subset(path_all_balrog_data, path_save, name_save_file, number
             'BDF_FLUX_DERED_CALIB_KS': 'BDF_FLUX_DERED_CALIB_K',
             'BDF_FLUX_ERR_DERED_CALIB_KS': 'BDF_FLUX_ERR_DERED_CALIB_K'},
         inplace=True)
-    # df_balrog["BDF_G"] = np.sqrt(df_balrog["BDF_G_0"] ** 2 + df_balrog["BDF_G_1"] ** 2)
+    df_balrog["BDF_G"] = np.sqrt(df_balrog["BDF_G_0"] ** 2 + df_balrog["BDF_G_1"] ** 2)
 
     print(df_balrog.isna().sum())
     if apply_fill_na == "Gauss":
@@ -108,54 +107,6 @@ def create_balrog_subset(path_all_balrog_data, path_save, name_save_file, number
     df_balrog_subset = df_balrog.sample(number_of_samples, ignore_index=True, replace=False)
     path_balrog_subset = f"{path_save}/{name_save_file}_{number_of_samples}.pkl"
 
-    ####################################################################################################################
-    # Todo size_ratio macht schwierigkeiten beim lernen. Was kann ich machen, damit das besser wird?
-    # plot_histo(
-    #     data_frame=df_balrog,
-    #     cols=[
-    #         "unsheared/size_ratio"
-    #     ],
-    # )
-    # plot_chain(
-    #     data_frame=df_balrog,
-    #     plot_name="hist_t",
-    #     columns=[
-    #         "unsheared/T",
-    #         "unsheared/size_ratio"
-    #     ],
-    #     parameter=[
-    #         "T",
-    #         "size_ratio"
-    #     ]
-    # )
-    # yj_transform_data(
-    #     data_frame=df_balrog,
-    #     columns=[
-    #         "unsheared/T"
-    #     ]
-    # )
-    #
-    # plot_histo(
-    #     data_frame=df_balrog,
-    #     cols=[
-    #         "unsheared/size_ratio"
-    #     ],
-    # )
-    # plot_chain(
-    #     data_frame=df_balrog,
-    #     plot_name="hist_t",
-    #     columns=[
-    #         "unsheared/T",
-    #         "unsheared/size_ratio"
-    #     ],
-    #     parameter=[
-    #         "T",
-    #         "size_ratio"
-    #     ]
-    # )
-    # exit()
-    ####################################################################################################################
-
     save_balrog_subset(
         data_frame=df_balrog_subset,
         path_balrog_subset=path_balrog_subset,
@@ -207,153 +158,8 @@ if __name__ == '__main__':
         'MAGLIM_Z': (-9999, -2, 2.0)
     }
 
-
-
-    ####################################################################################################################
-
-    deep_field_cols = [
-        # "BDF_FLUX_DERED_CALIB_U",
-        # "BDF_FLUX_DERED_CALIB_G",
-        "BDF_FLUX_DERED_CALIB_R",
-        "BDF_FLUX_DERED_CALIB_I",
-        "BDF_FLUX_DERED_CALIB_Z",
-        # "BDF_FLUX_DERED_CALIB_J",
-        # "BDF_FLUX_DERED_CALIB_H",
-        # "BDF_FLUX_DERED_CALIB_K",
-        "unsheared/flux_r",
-        "unsheared/flux_i",
-        "unsheared/flux_z"
-    ]
-
-    deep_field_cols_mag = [
-        # "BDF_MAG_DERED_CALIB_U",
-        # "BDF_MAG_DERED_CALIB_G",
-        "BDF_MAG_DERED_CALIB_R",
-        "BDF_MAG_DERED_CALIB_I",
-        "BDF_MAG_DERED_CALIB_Z",
-        # "BDF_MAG_DERED_CALIB_J",
-        # "BDF_MAG_DERED_CALIB_H",
-        # "BDF_MAG_DERED_CALIB_K",
-        "unsheared/mag_r",
-        "unsheared/mag_i",
-        "unsheared/mag_z"
-    ]
-
-    bdf_bins = ["R", "I", "Z"]  # "U", "G", , "J", "H", "K"
-    unsheared_bins = ["r", "i", "z"]
-    plot_color = False
-    #
-    # from astropy.table import Table
-    # import h5py
-    # import fitsio
-    # path_deep_field1 = f"{path}/Data/y3_balrog2_v1.2_merged_select2_bstarcut_matchflag1.5asec_snr_SR_corrected_uppersizecuts.h5"
-    # df_data_reg = pd.read_hdf(path_deep_field1)
-    #
-    infile_my = open(f"{path}/Data/balrog_cat_mcal_detect_my_df_26442133.pkl", 'rb')
-    df_data_my = pd.DataFrame(pickle.load(infile_my, encoding='latin1'))
-    infile_my.close()
-    infile_reg = open(f"{path}/Data/y3-merged_deep_field_metacal_cuts_v1.2.pkl", 'rb')
-    df_data_reg = pd.DataFrame(pickle.load(infile_reg, encoding='latin1'))
-    infile_reg.close()
-
-    # df_data_my.rename(
-    #     columns={
-    #         'BDF_FLUX_DERED_CALIB_KS': 'BDF_FLUX_DERED_CALIB_K',
-    #         'BDF_FLUX_ERR_DERED_CALIB_KS': 'BDF_FLUX_ERR_DERED_CALIB_K'},
-    #     inplace=True)
-    #
-    # df_data_reg['BDF_FLUX_ERR_DERED_CALIB_R'] = df_data_reg['BDF_FLUX_DERED_CALIB_R']
-    # df_data_reg['BDF_FLUX_ERR_DERED_CALIB_I'] = df_data_reg['BDF_FLUX_DERED_CALIB_I']
-    # df_data_reg['BDF_FLUX_ERR_DERED_CALIB_Z'] = df_data_reg['BDF_FLUX_DERED_CALIB_Z']
-    df_data_reg['unsheared/flux_err_r'] = df_data_reg['unsheared/flux_r']
-    df_data_reg['unsheared/flux_err_i'] = df_data_reg['unsheared/flux_i']
-    df_data_reg['unsheared/flux_err_z'] = df_data_reg['unsheared/flux_z']
-    # df_data_reg.rename(
-    #     columns={
-    #         'BDF_FLUX_DERED_CALIB_R': 'BDF_FLUX_ERR_DERED_CALIB_R',
-    #         'BDF_FLUX_DERED_CALIB_R': 'BDF_FLUX_ERR_DERED_CALIB_R',
-    #         'BDF_FLUX_DERED_CALIB_R': 'BDF_FLUX_ERR_DERED_CALIB_R'},
-    #     inplace=True)
-    #
-    # # for idx, col in enumerate(deep_field_cols_mag):
-    # #     df_data_my[col] = flux2mag(df_data_my[deep_field_cols[idx]])
-    # #     df_data_reg[col] = flux2mag(df_data_reg[deep_field_cols[idx]])
-    #
-    df_data_my = calc_color(
-        data_frame=df_data_my,
-        mag_type=("MAG", "BDF"),
-        flux_col=("BDF_FLUX_DERED_CALIB", "BDF_FLUX_ERR_DERED_CALIB"),
-        mag_col=("BDF_MAG_DERED_CALIB", "BDF_MAG_ERR_DERED_CALIB"),
-        bins=bdf_bins,
-        plot_data=plot_color,
-        plot_name=f"bdf_mag"
-    )
-    df_data_my = calc_color(
-        data_frame=df_data_my,
-        mag_type=("MAG", "unsheared"),
-        flux_col=("unsheared/flux", "unsheared/flux_err"),
-        mag_col=("unsheared/mag", "unsheared/mag_err"),
-        bins=unsheared_bins,
-        plot_data=plot_color,
-        plot_name=f"unsheared/mag"
-    )
-
-    # df_data_reg = calc_color(
-    #     data_frame=df_data_reg,
-    #     mag_type=("MAG", "BDF"),
-    #     flux_col=("BDF_FLUX_DERED_CALIB", "BDF_FLUX_ERR_DERED_CALIB"),
-    #     mag_col=("BDF_MAG_DERED_CALIB", "BDF_MAG_ERR_DERED_CALIB"),
-    #     bins=bdf_bins,
-    #     plot_data=plot_color,
-    #     plot_name=f"bdf_mag"
-    # )
-    df_data_reg = calc_color(
-        data_frame=df_data_reg,
-        mag_type=("MAG", "unsheared"),
-        flux_col=("unsheared/flux", "unsheared/flux_err"),
-        mag_col=("unsheared/mag", "unsheared/mag_err"),
-        bins=unsheared_bins,
-        plot_data=plot_color,
-        plot_name=f"unsheared/mag"
-    )
-
-    df_data_my = df_data_my[df_data_my["detected"] == 1]
-    df_data_my = unsheared_object_cuts(data_frame=df_data_my)
-    df_data_my = flag_cuts(data_frame=df_data_my)
-    df_data_my = unsheared_mag_cut(data_frame=df_data_my)
-    df_data_my = unsheared_shear_cuts(data_frame=df_data_my)
-    df_data_my = binary_cut(data_frame=df_data_my)
-
-    # df_data_reg = df_data_reg[df_data_reg["detected"] == 1]
-    # df_data_reg = unsheared_object_cuts(data_frame=df_data_reg)
-    # df_data_reg = flag_cuts(data_frame=df_data_reg)
-    # df_data_reg = unsheared_mag_cut(data_frame=df_data_reg)
-    # df_data_reg = unsheared_shear_cuts(data_frame=df_data_reg)
-    # df_data_reg = binary_cut(data_frame=df_data_reg)
-
-    df_plot = pd.DataFrame()
-    for col in deep_field_cols_mag:
-        df_plot[col] = list(df_data_my[col]) + list(df_data_reg[col])
-
-    df_plot["type"] = ["my deep field" for _ in range(len(df_data_my))] + ["regular deep field" for _ in range(len(df_data_reg))]
-
-    for col in deep_field_cols_mag:
-        mean_my_df = df_data_my[col].mean()
-        mean_reg_df = df_data_reg[col].mean()
-        std_my_df = df_data_my[col].std()
-        std_reg_df = df_data_reg[col].std()
-        print("my mean:", mean_my_df, "std:", std_my_df)
-        print("reg mean:", mean_reg_df, "std:", std_reg_df)
-        sns.histplot(df_plot, x=col, hue="type", stat='density', bins=100)
-        plt.title(f"my mean: {mean_my_df:.4f} std: {std_my_df:.4f} reg mean: {mean_reg_df:.4f} std: {std_reg_df:.4f}")
-        plt.ylim(0, .3)
-        plt.show()
-
-    exit()
-    ####################################################################################################################
-
     create_balrog_subset(
-        path_all_balrog_data=f"{path}/Data/balrog_cat_mcal_detect_df_no_cuts_26442133.pkl",  # balrog_cat_mcal_detect_df_no_cuts_26442133    balrog_cat_mcal_detect_reg_df_26442133
+        path_all_balrog_data=f"{path}/Data/balrog_cat_mcal_detect_df_no_cuts_26442133.pkl",
         path_save=f"{path}/Output",
         name_save_file="balrog_all_cuts",
         number_of_samples=no_samples,
