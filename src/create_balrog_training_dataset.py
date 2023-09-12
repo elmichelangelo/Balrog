@@ -289,9 +289,9 @@ if __name__ == "__main__":
     main(
         path_metacal=f"{path_data}/balrog_mcal_stack-y3v02-0-riz-noNB-mcal_y3-merged_v1.2.h5",
         path_detection=f"{path_data}/balrog_detection_catalog_sof_y3-merged_v1.2.fits",
-        path_deep_field=f"{path_data}/deep_field_err.pkl",
+        path_deep_field=f"{path_data}/deep_field_err.fits",
         path_survey=f"{path_data}/sct2",
-        path_save=f"{path_data}/balrog_cat_mcal_detect_reg_df_",
+        path_save=f"{path_data}/balrog_cat_mcal_detect_df_no_cuts",
         metacal_cols=other_metacal_cols + ['unsheared/flux_{}'.format(i) for i in 'irz'] + ['unsheared/flux_err_{}'.format(i) for i in 'irz'],
         protocol=None,
         detection_cols=[
@@ -319,7 +319,7 @@ if __name__ == "__main__":
             "BDF_FLUX_DERED_CALIB_Z",
             "BDF_FLUX_DERED_CALIB_J",
             "BDF_FLUX_DERED_CALIB_H",
-            "BDF_FLUX_DERED_CALIB_K",
+            "BDF_FLUX_DERED_CALIB_KS",
             "BDF_FLUX_ERR_DERED_CALIB_U",
             "BDF_FLUX_ERR_DERED_CALIB_G",
             "BDF_FLUX_ERR_DERED_CALIB_R",
@@ -327,7 +327,7 @@ if __name__ == "__main__":
             "BDF_FLUX_ERR_DERED_CALIB_Z",
             "BDF_FLUX_ERR_DERED_CALIB_J",
             "BDF_FLUX_ERR_DERED_CALIB_H",
-            "BDF_FLUX_ERR_DERED_CALIB_K"
+            "BDF_FLUX_ERR_DERED_CALIB_KS"
 
         ],
         survey_cols=[
