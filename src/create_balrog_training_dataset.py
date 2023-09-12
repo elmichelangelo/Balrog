@@ -11,41 +11,9 @@ import healpy as hp
 # from Handler.cut_functions import *
 
 
-"""
-Proposed cuts
-
-unsheared_snr_cut = (df_merged['unsheared/snr'] > 10) & (df_merged['unsheared/snr'] < 1000)                                 # Yes at balrog_wide_field.py
-unsheared_size_ratio_cut = df_merged['unsheared/size_ratio'] > 0.5                                                          # Yes at balrog_wide_field.py
-unsheared_flags_cut = df_merged['unsheared/flags'] == 0                                                                     # No
-#unsheared_new_cut = (df_merged['unsheared/snr'] > 30) & (df_merged['unsheared/T'] < 2)                                     # No, but commited out here
-unsheared_size_cut = (df_merged['unsheared/T'] < 10)                                                                        # Yes at balrog_wide_field.py
-flags_foreground_cut = df_merged['flags_foreground'] == 0                                                                   # Yes at row 131
-flags_badregions_cut = df_merged['flags_badregions'] < 2                                                                    # Yes at row 132
-flags_gold_cut = df_merged['meas_FLAGS_GOLD_SOF_ONLY'] < 2                                                                  # No
-flags_footprint_cut = df_merged['flags_footprint'] == 1                                                                     # Yes at row 133
-mask_cut = np.in1d(gpix // (hp.nside2npix(16384) // hp.nside2npix(4096)), f['index/mask/hpix'][:], assume_unique=False)     # No
-highe_cut = np.greater(np.sqrt(np.power(df_merged['unsheared/e_1'],2.) + np.power(df_merged['unsheared/e_2'],2)), 0.8)      # No
-magT_cut = np.log10(df_merged['unsheared/T']) < (c - flux2mag(df_merged['unsheared/flux_r']))/m                             # No
-unsheared_imag_cut = (flux2mag(df_merged['unsheared/flux_i'])>18) & (flux2mag(df_merged['unsheared/flux_i'])<23.5)          # Yes at balrog_wide_field.py
-unsheared_rmag_cut = (flux2mag(df_merged['unsheared/flux_r'])>15) & (flux2mag(df_merged['unsheared/flux_r'])<26)            # Yes at balrog_wide_field.py
-unsheared_zmag_cut = (flux2mag(df_merged['unsheared/flux_z'])>15) & (flux2mag(df_merged['unsheared/flux_z'])<26)            # Yes at balrog_wide_field.py
-unsheared_zi_cut = ((flux2mag(df_merged['unsheared/flux_z'])-flux2mag(df_merged['unsheared/flux_i'])) <1.5) & \
-                   ((flux2mag(df_merged['unsheared/flux_z'])-flux2mag(df_merged['unsheared/flux_i'])) >-4)                  # Yes at balrog_wide_field.py
-unsheared_ri_cut = ((flux2mag(df_merged['unsheared/flux_r'])-flux2mag(df_merged['unsheared/flux_i'])) <4) & \
-                   ((flux2mag(df_merged['unsheared/flux_r'])-flux2mag(df_merged['unsheared/flux_i'])) >-1.5)                # Yes at balrog_wide_field.py
-unsheared_new_cut = (df_merged['unsheared/snr'] < 30) & (df_merged['unsheared/T'] > 2)                                      # Yes at balrog_wide_field.py
-
-Cuts that I have:
-
-df_detect["match_flag_1.5_asec"] < 2
-mcal_cuts = (df_mcal["unsheared/extended_class_sof"] >= 0) & (df_mcal["unsheared/flags_gold"] < 2)
-
-"""
-
-
 def read_catalogs(path_metacal, path_detection, path_deep_field, path_survey, metacal_cols, detection_cols,
-                  deep_field_cols, survey_cols, nside, apply_object_cut, apply_flag_cut, plot_healpix=True,
-                  show_plot=True, save_plot=False):
+                  deep_field_cols, survey_cols, nside, plot_healpix=False,
+                  show_plot=False, save_plot=False):
     """"""
     df_mcal = None
     df_detect = None
@@ -53,37 +21,53 @@ def read_catalogs(path_metacal, path_detection, path_deep_field, path_survey, me
     df_survey = None
 
     if path_metacal is not None:
+        # Read h5py file
         metacal_data = h5py.File(path_metacal, 'r')
+
+        # Add columns to DataFrame
         df_mcal = pd.DataFrame()
-        for i, col in enumerate(metacal_cols + ["unsheared/extended_class_sof", "unsheared/flags_gold"]):
-            df_mcal[col] = np.array(metacal_data['catalog/' + col]).byteswap().newbyteorder("<")
-        print('Length of mcal catalog: {}'.format(len(df_mcal)))
-        if apply_object_cut is True:
-            df_mcal = unsheared_object_cuts(df_mcal)
+        for i, col in enumerate(metacal_cols):
+            if col =="unsheared/weight":
+                df_mcal[col] = np.array(metacal_data['catalog/' + col])
+            else:
+                df_mcal[col] = np.array(metacal_data['catalog/' + col]).byteswap().newbyteorder("<")
+
+        # Rename some columns
         df_mcal = df_mcal[metacal_cols]
         df_mcal = df_mcal.rename(columns={'unsheared/bal_id': 'bal_id'})
         df_mcal = df_mcal.rename(columns={'unsheared/coadd_object_id': 'COADD_OBJECT_ID'})
+
+        # Verbose
+        print('Length of mcal catalog: {}'.format(len(df_mcal)))
         for i, col in enumerate(df_mcal.columns):
             print(i, col)
         print(df_mcal.isnull().sum())
 
     if path_detection is not None:
-        detection_data = Table(fitsio.read(path_detection).byteswap().newbyteorder())  # , columns=detection_cols
+        # Read fits file
+        detection_data = Table(fitsio.read(path_detection).byteswap().newbyteorder())
+
+        # Add columns to DataFrame
         df_detect = pd.DataFrame()
-        lst_cut_col = ["match_flag_1.5_asec", "flags_foreground", "flags_badregions", "flags_footprint"]
-        for i, col in enumerate(detection_cols + lst_cut_col):
+        for i, col in enumerate(detection_cols):
             df_detect[col] = detection_data[col]
+
+        # Rename some columns
+        df_detect = df_detect.rename(columns={'true_id': 'ID'})
+
+        # Count injections
+        df_detect = compute_injection_counts(df_detect)
+
+        # Get HPIX Index
+        df_detect[f"HPIX_{nside}"] = DeclRaToIndex(np.array(df_detect["true_dec"]), np.array(df_detect["true_ra"]), nside)
+
+        # Verbose
         print('Length of detection catalog: {}'.format(len(df_detect)))
-        if apply_flag_cut is True:
-            df_detect = flag_cuts(df_detect)
-        df_detect = df_detect[detection_cols]
         for i, col in enumerate(df_detect.keys()):
             print(i, col)
-        df_detect = df_detect.rename(columns={'true_id': 'ID'})
-        df_detect = compute_injection_counts(df_detect)
-        df_detect[f"HPIX_{nside}"] = DeclRaToIndex(np.array(df_detect["true_dec"]), np.array(df_detect["true_ra"]), nside)
         print(df_detect.isnull().sum())
 
+        # Plot Data
         if plot_healpix is True:
             import healpy as hp
             arr_hpix = df_detect[f"HPIX_{nside}"].to_numpy()
@@ -101,19 +85,34 @@ def read_catalogs(path_metacal, path_detection, path_deep_field, path_survey, me
                 plt.show()
 
     if path_deep_field is not None:
-        deep_field_data = Table(fitsio.read(path_deep_field).byteswap().newbyteorder())
-        df_deep_field = pd.DataFrame()
-        for i, col in enumerate(deep_field_cols):
-            print(i, col)
-            df_deep_field[col] = deep_field_data[col]
-        print('Length of deep field catalog: {}'.format(len(df_deep_field)))
-        print(df_deep_field.isnull().sum())
+        ################################################################################################################
+        infile = open(path_deep_field, 'rb')
+        df_deep_field_all = pd.DataFrame(pickle.load(infile, encoding='latin1'))
+        df_deep_field = df_deep_field_all[deep_field_cols]
+        infile.close()
+
+        ################################################################################################################
+        # Read fits file
+        # deep_field_data = Table(fitsio.read(path_deep_field).byteswap().newbyteorder())
+
+        # Add columns to DataFrame
+        # df_deep_field = pd.DataFrame()
+        # for i, col in enumerate(deep_field_cols):
+        #     print(i, col)
+        #     df_deep_field[col] = deep_field_data[col]
+
+        # Verbose
+        # print('Length of deep field catalog: {}'.format(len(df_deep_field)))
+        # print(df_deep_field.isnull().sum())
 
     if path_survey is not None:
         df_survey = pd.DataFrame()
         for idx, file in enumerate(os.listdir(path_survey)):
             if "fits" in file:
+                # Read fits file
                 survey_data = Table(fitsio.read(f"{path_survey}/{file}", columns=survey_cols))
+
+                # Add columns to DataFrame
                 df_survey_tmp = pd.DataFrame()
                 for i, col in enumerate(survey_cols):
                     print(i, col)
@@ -123,10 +122,13 @@ def read_catalogs(path_metacal, path_detection, path_deep_field, path_survey, me
                 else:
                     df_survey = pd.concat([df_survey, df_survey_tmp], ignore_index=True)
                 print(df_survey_tmp.shape)
+
+        # Verbose
         print('Length of survey catalog: {}'.format(len(df_survey)))
         print(df_survey.isnull().sum())
         print(df_survey.shape)
 
+        # Plot Data
         if plot_healpix is True:
             arr_hpix = df_survey[f"HPIX_{nside}"].to_numpy()
             arr_flux = df_survey[f"AIRMASS_WMEAN_R"].to_numpy()
@@ -146,16 +148,13 @@ def read_catalogs(path_metacal, path_detection, path_deep_field, path_survey, me
 def compute_injection_counts(det_catalog):
     # `true_id` is the DF id
     unique, ucounts = np.unique(det_catalog['ID'], return_counts=True)
-
     freq = pd.DataFrame()
     freq['ID'] = unique
     freq['injection_counts'] = ucounts
-
     return det_catalog.merge(freq, on='ID', how='left')
 
 
-def merge_catalogs(metacal=None, deep_field=None, detection=None, survey=None, only_detected=False,
-                   apply_airmass_cut=False, apply_unsheared_mag_cut=False, apply_unsheared_shear_cut=False):
+def merge_catalogs(metacal=None, deep_field=None, detection=None, survey=None):
     """"""
     print('Merging catalogs...')
 
@@ -234,11 +233,11 @@ def write_data_2_file(df_generated_data, save_path, number_of_sources, protocol)
         df_generated_data.to_pickle(f"{save_path}{number_of_sources}.pkl")
 
 
-def main(path_metacal, path_detection, path_deep_field, path_survey, path_save, metacal_cols,
-         detection_cols, deep_field_cols, survey_cols, apply_object_cut, apply_flag_cut, only_detected,
-         apply_airmass_cut, apply_unsheared_mag_cut, apply_unsheared_shear_cut, nside, protocol):
+def main(path_metacal, path_detection, path_deep_field, path_survey, path_save, metacal_cols, detection_cols,
+         deep_field_cols, survey_cols, only_detected, nside, protocol, show_plot, save_plot, plot_healpix):
     """"""
 
+    # Read all catalogs
     df_mcal, df_deep_field, df_detect, df_survey = read_catalogs(
         path_metacal=path_metacal,
         path_detection=path_detection,
@@ -248,23 +247,22 @@ def main(path_metacal, path_detection, path_deep_field, path_survey, path_save, 
         detection_cols=detection_cols,
         deep_field_cols=deep_field_cols,
         survey_cols=survey_cols,
-        apply_object_cut=apply_object_cut,
-        apply_flag_cut=apply_flag_cut,
-        nside=nside
+        nside=nside,
+        plot_healpix=plot_healpix,
+        show_plot=show_plot,
+        save_plot=save_plot
     )
 
     if df_mcal is not None and df_detect is not None and df_deep_field is not None and df_survey is not None:
+        # Merge all catalogs
         df_merged = merge_catalogs(
             metacal=df_mcal,
             detection=df_detect,
             deep_field=df_deep_field,
-            survey=df_survey,
-            only_detected=only_detected,
-            apply_airmass_cut=apply_airmass_cut,
-            apply_unsheared_mag_cut=apply_unsheared_mag_cut,
-            apply_unsheared_shear_cut=apply_unsheared_shear_cut
+            survey=df_survey
         )
 
+        # Save Data to File
         write_data_2_file(
             df_generated_data=df_merged,
             save_path=path_save,
@@ -296,11 +294,11 @@ if __name__ == "__main__":
     ]
 
     main(
-        path_metacal=f"{path_data}/balrog_mcal_stack-y3v02-0-riz-noNB-mcal_y3-merged_v1.2.h5",  #
-        path_detection=f"{path_data}/balrog_detection_catalog_sof_y3-merged_v1.2.fits",  # ,
-        path_deep_field=f"{path_data}/deep_field_err.fits",  # ,
-        path_survey=f"{path_data}/sct2",  # survey_conditions.fits
-        path_save=f"{path_data}/balrog_cat_mcal_detect_df_wo_cuts_",
+        path_metacal=f"{path_data}/balrog_mcal_stack-y3v02-0-riz-noNB-mcal_y3-merged_v1.2.h5",
+        path_detection=f"{path_data}/balrog_detection_catalog_sof_y3-merged_v1.2.fits",
+        path_deep_field=f"{path_data}/deep_ugriz.mof02_sn.jhk.ff04_c.jhk.ff02_052020_realerrors_May20calib.pkl",  # deep_field_err.fits
+        path_survey=f"{path_data}/sct2",
+        path_save=f"{path_data}/balrog_cat_mcal_detect_reg_df_",
         metacal_cols=other_metacal_cols + ['unsheared/flux_{}'.format(i) for i in 'irz'] + ['unsheared/flux_err_{}'.format(i) for i in 'irz'],
         protocol=None,
         detection_cols=[
@@ -318,9 +316,9 @@ if __name__ == "__main__":
             "ID",
             "RA",
             "DEC",
-            "BDF_T",
-            "BDF_G_0",
-            "BDF_G_1",
+            # "BDF_T",
+            # "BDF_G_0",
+            # "BDF_G_1",
             "BDF_FLUX_DERED_CALIB_U",
             "BDF_FLUX_DERED_CALIB_G",
             "BDF_FLUX_DERED_CALIB_R",
@@ -328,7 +326,7 @@ if __name__ == "__main__":
             "BDF_FLUX_DERED_CALIB_Z",
             "BDF_FLUX_DERED_CALIB_J",
             "BDF_FLUX_DERED_CALIB_H",
-            "BDF_FLUX_DERED_CALIB_KS",
+            "BDF_FLUX_DERED_CALIB_K",
             "BDF_FLUX_ERR_DERED_CALIB_U",
             "BDF_FLUX_ERR_DERED_CALIB_G",
             "BDF_FLUX_ERR_DERED_CALIB_R",
@@ -336,7 +334,7 @@ if __name__ == "__main__":
             "BDF_FLUX_ERR_DERED_CALIB_Z",
             "BDF_FLUX_ERR_DERED_CALIB_J",
             "BDF_FLUX_ERR_DERED_CALIB_H",
-            "BDF_FLUX_ERR_DERED_CALIB_KS"
+            "BDF_FLUX_ERR_DERED_CALIB_K"
 
         ],
         survey_cols=[
@@ -352,11 +350,9 @@ if __name__ == "__main__":
             "MAGLIM_Z",
             "EBV_SFD98"
         ],
-        apply_object_cut=False,
-        apply_flag_cut=False,
         only_detected=False,
-        apply_airmass_cut=False,
-        apply_unsheared_mag_cut=False,
-        apply_unsheared_shear_cut=False,
-        nside=NSIDE
+        nside=NSIDE,
+        show_plot=False,
+        save_plot=False,
+        plot_healpix=False
     )

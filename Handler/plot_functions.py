@@ -5,7 +5,6 @@ import numpy as np
 import imageio
 import os
 from natsort import natsorted
-from chainconsumer import ChainConsumer
 from scipy.stats import gaussian_kde
 from Handler.helper_classes import MidpointNormalize
 
@@ -21,7 +20,6 @@ def plot_histo(data_frame, cols):
 def plot_chain(data_frame, plot_name, max_ticks=5, shade_alpha=0.8, tick_font_size=12, label_font_size=12, columns=None,
                parameter=None, extends=None):
     """
-
     :param extends: extents={
                 "mag r": (17.5, 26),
                 "mag i": (17.5, 26),
@@ -54,6 +52,7 @@ def plot_chain(data_frame, plot_name, max_ticks=5, shade_alpha=0.8, tick_font_si
             ]
     :return:
     """
+    from chainconsumer import ChainConsumer
     df_plot = pd.DataFrame({})
 
     if columns is None:
@@ -187,6 +186,7 @@ def loss_plot(
 
 def color_color_plot(data_frame_generated, luminosity_type, data_frame_true, colors, show_plot, save_name, extents=None):
     """"""
+    from chainconsumer import ChainConsumer
     df_generated_measured = pd.DataFrame({})
     df_true_measured = pd.DataFrame({})
     for color in colors:
@@ -307,6 +307,7 @@ def residual_plot(data_frame_generated, data_frame_true, luminosity_type, bands,
 def plot_chain_compare(data_frame_generated, data_frame_true, epoch, show_plot, save_name, columns=None, parameter=None,
                        extends=None, max_ticks=5, shade_alpha=0.8, tick_font_size=12, label_font_size=12):
     """"""
+    from chainconsumer import ChainConsumer
     if columns is None:
         columns = [
             "unsheared/mag_r",

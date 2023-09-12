@@ -384,3 +384,26 @@ def save_balrog_subset(data_frame, path_balrog_subset, protocol):
             pickle.dump(data_frame.to_dict(), f, protocol=2)
     else:
         data_frame.to_pickle(path_balrog_subset)
+
+
+def assign_loggrid( x, y, xmin, xmax, xsteps, ymin, ymax, ysteps):
+    # return x and y indices of data (x,y) on a log-spaced grid that runs from [xy]min to [xy]max in [xy]steps
+    x = np.maximum(x, xmin)
+    x = np.minimum(x, xmax)
+    y = np.maximum(y, ymin)
+    y = np.minimum(y, ymax)
+    logstepx = np.log10(xmax/xmin)/xsteps
+    logstepy = np.log10(ymax/ymin)/ysteps
+    indexx = (np.log10(x/xmin)/logstepx).astype(int)
+    indexy = (np.log10(y/ymin)/logstepy).astype(int)
+    indexx = np.minimum(indexx, xsteps-1)
+    indexy = np.minimum(indexy, ysteps-1)
+    return indexx,indexy
+
+
+def apply_loggrid(x, y, grid, xmin=10, xmax=300, xsteps=20, ymin=0.5, ymax=5, ysteps=20):
+    # step 2 - assign weight to each galaxy
+    indexx, indexy = assign_loggrid(x, y, xmin, xmax, xsteps, ymin, ymax, ysteps)
+    res = np.zeros(len(x))
+    res = grid[indexx, indexy]
+    return res
