@@ -291,7 +291,7 @@ if __name__ == "__main__":
         path_detection=f"{path_data}/balrog_detection_catalog_sof_y3-merged_v1.2.fits",
         path_deep_field=f"{path_data}/deep_field_err.fits",
         path_survey=f"{path_data}/sct2",
-        path_save=f"{path_data}/balrog_cat_mcal_detect_df_no_cuts",
+        path_save=f"{path_data}/balrog_training_no_cuts_",
         metacal_cols=other_metacal_cols + ['unsheared/flux_{}'.format(i) for i in 'irz'] + ['unsheared/flux_err_{}'.format(i) for i in 'irz'],
         protocol=None,
         detection_cols=[

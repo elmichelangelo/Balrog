@@ -116,7 +116,7 @@ def create_balrog_subset(path_all_balrog_data, path_save, name_save_file, number
 
 if __name__ == '__main__':
     path = os.path.abspath(sys.path[0])
-    no_samples = None  # int(3E6)  # int(250000)  # int(250000) # 20000 # int(8E6)
+    no_samples = 250000  # int(3E6)  # int(8E6)
 
     dict_fill_na = {
         'unsheared/snr': (-10, 2.0),
@@ -159,7 +159,7 @@ if __name__ == '__main__':
     }
 
     create_balrog_subset(
-        path_all_balrog_data=f"{path}/Data/balrog_cat_mcal_detect_df_no_cuts_26442133.pkl",
+        path_all_balrog_data=f"{path}/Data/balrog_training_no_cuts_26442133.pkl",
         path_save=f"{path}/Output",
         name_save_file="balrog_all_cuts",
         number_of_samples=no_samples,
