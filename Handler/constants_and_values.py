@@ -1,0 +1,10 @@
+import logging
+
+
+LOGGING_LEVEL = logging.DEBUG
+INFO_LOGGER = False
+ERROR_LOGGER = False
+DEBUG_LOGGER = True
+STREAM_LOGGER = False
+
+MAX_THREADS = 5

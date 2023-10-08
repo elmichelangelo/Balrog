@@ -377,8 +377,10 @@ def open_all_balrog_dataset(path_all_balrog_data):
     return df_balrog
 
 
-def save_balrog_subset(data_frame, path_balrog_subset, protocol):
+def save_balrog_subset(data_frame, path_balrog_subset, protocol, lst_of_loggers):
     """"""
+    for log in lst_of_loggers:
+        log.info(f"Save data as {path_balrog_subset} with protocol {protocol}")
     if protocol == 2:
         with open(path_balrog_subset, "wb") as f:
             pickle.dump(data_frame.to_dict(), f, protocol=2)
