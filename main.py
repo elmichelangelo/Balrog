@@ -197,7 +197,7 @@ if __name__ == '__main__':
     elif get_os() == "Windows":
         config_file_name = "windows.cfg"
     elif get_os() == "Linux":
-        config_file_name = "linux.cfg"
+        config_file_name = "LMU.cfg"
     else:
         print(f"OS Error: {get_os()}")
 
