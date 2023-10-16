@@ -403,14 +403,14 @@ def write_data_2_file(cfg, df_generated_data, save_name, lst_of_loggers):
     if cfg["PROTOCOL"] == 2:
         for log in lst_of_loggers:
             log.info(f"Use protocol 2")
-            log.info(f"Save as {cfg['PATH_OUTPUT']}/Catalogs/{save_name}")
-        with open(f"{cfg['PATH_OUTPUT']}/Catalogs/{save_name}", "wb") as f:
+            log.info(f"Save as {cfg['PATH_OUTPUT']}Catalogs/{save_name}")
+        with open(f"{cfg['PATH_OUTPUT']}Catalogs/{save_name}", "wb") as f:
             pickle.dump(df_generated_data.to_dict(), f, protocol=2)
     else:
         for log in lst_of_loggers:
             log.info(f"Use protocol 5")
-            log.info(f"Save as {cfg['PATH_OUTPUT']}/Catalogs/{save_name}")
-        df_generated_data.to_pickle(f"{cfg['PATH_OUTPUT']}/Catalogs/{save_name}")
+            log.info(f"Save as {cfg['PATH_OUTPUT']}Catalogs/{save_name}")
+        df_generated_data.to_pickle(f"{cfg['PATH_OUTPUT']}Catalogs/{save_name}")
 
 
 def main(cfg):
