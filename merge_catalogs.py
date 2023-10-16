@@ -514,7 +514,7 @@ if __name__ == "__main__":
     if isinstance(args.config_filename, list):
         args.config_filename = args.config_filename[0]
 
-    with open(f"{path}/../config/{args.config_filename}", 'r') as fp:
+    with open(f"{path}/config/{args.config_filename}", 'r') as fp:
         cfg = yaml.load(fp, Loader=yaml.Loader)
 
     main(cfg=cfg)
