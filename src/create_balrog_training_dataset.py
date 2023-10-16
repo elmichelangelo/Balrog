@@ -432,7 +432,7 @@ def write_data_2_file(df_generated_data, save_path, save_name, protocol, lst_of_
 
 def main(path_metacal, path_detection, path_deep_field, path_bdf_info, path_sompz_cosmos, path_survey, path_save,
          path_log, metacal_cols, detection_cols, deep_field_cols, survey_cols, only_detected, nside, protocol,
-         show_plot, save_plot, plot_healpix):
+         dict_defaults, show_plot, save_plot, plot_healpix):
     """"""
 
     # Initialize the logger
@@ -481,6 +481,20 @@ def main(path_metacal, path_detection, path_deep_field, path_bdf_info, path_somp
             lst_of_loggers=lst_of_loggers,
         )
 
+        len_before = len(df_merged)
+        print("Drop defaults")
+        for log in lst_of_loggers:
+            log.info("Drop defaults")
+        for col in dict_defaults.keys():
+            print(f"replace defaults drop: col={col} val={dict_defaults[col]}")
+            for log in lst_of_loggers:
+                log.info(f"replace defaults drop: col={col} val={dict_defaults[col]}")
+            indices_to_drop = df_merged[df_merged[col] == dict_defaults[col]].index
+            df_merged.drop(indices_to_drop, inplace=True)
+        len_after = len(df_merged)
+        for k in df_merged.keys():
+            print(k, df_merged[k].min(), df_merged[k].max())
+        print("Dropped {} rows".format(len_before - len_after))
         # Save Data to File
         write_data_2_file(
             df_generated_data=df_merged,
@@ -522,6 +536,33 @@ if __name__ == "__main__":
         'unsheared/e_2'
     ]
 
+    dict_defaults = {
+        'BDF_FLUX_DERED_CALIB_J': -9999000000.0,
+        'BDF_FLUX_DERED_CALIB_H': -9999000000.0,
+        'BDF_FLUX_DERED_CALIB_K': -9999000000.0,
+        'BDF_MAG_DERED_CALIB_J': -9999000000.0,
+        'BDF_MAG_DERED_CALIB_H': -9999000000.0,
+        'BDF_MAG_DERED_CALIB_K': -9999000000.0,
+        'BDF_FLUX_ERR_DERED_CALIB_G': 9999000000.0,
+        'BDF_FLUX_ERR_DERED_CALIB_Z': 9999000000.0,
+        'BDF_FLUX_ERR_DERED_CALIB_J': 9999000000.0,
+        'BDF_FLUX_ERR_DERED_CALIB_H': 9999000000.0,
+        'BDF_FLUX_ERR_DERED_CALIB_K': 9999000000.0,
+        'unsheared/snr': -7070.360705084288,
+        'unsheared/T': -9999,
+        "unsheared/e_1": -9999,
+        "unsheared/e_2": -9999,
+        'AIRMASS_WMEAN_R': -9999,
+        'AIRMASS_WMEAN_I': -9999,
+        'AIRMASS_WMEAN_Z': -9999,
+        'FWHM_WMEAN_R': -9999,
+        'FWHM_WMEAN_I': -9999,
+        'FWHM_WMEAN_Z': -9999,
+        'MAGLIM_R': -9999,
+        'MAGLIM_I': -9999,
+        'MAGLIM_Z': -9999
+    }
+
     main(
         path_metacal=f"{path_data}/balrog_mcal_stack-y3v02-0-riz-noNB-mcal_y3-merged_v1.2.h5",
         path_detection=f"{path_data}/balrog_detection_catalog_sof_y3-merged_v1.2.fits",
@@ -533,6 +574,7 @@ if __name__ == "__main__":
         path_save=f"{path_output}/Catalogs/",
         path_log=f"{path_output}/Logs/",
         metacal_cols=other_metacal_cols + ['unsheared/flux_{}'.format(i) for i in 'irz'] + ['unsheared/flux_err_{}'.format(i) for i in 'irz'],
+        dict_defaults=dict_defaults,
         protocol=None,
         detection_cols=[
             'bal_id',

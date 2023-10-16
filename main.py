@@ -76,7 +76,7 @@ def create_balrog_subset(path_all_balrog_data, path_save, path_log, name_save_fi
     for log in lst_of_loggers:
         log.info(df_balrog.isna().sum())
         log.info(df_balrog.isna().sum().sum())
-
+    print(len(df_balrog))
     if apply_replace_defaults == "Gauss":
         print(f"start replace default gauss")
         for log in lst_of_loggers:
@@ -91,6 +91,16 @@ def create_balrog_subset(path_all_balrog_data, path_save, path_log, name_save_fi
             for log in lst_of_loggers:
                 log.info(f"fill na default: col={col} val=({replace_defaults[col][0]}, {replace_defaults[col][1]})")
         df_balrog = replace_values(df_balrog, replace_defaults)
+    elif apply_replace_defaults == "Drop":
+        print("Drop defaults")
+        for log in lst_of_loggers:
+            log.info("Drop defaults")
+        for col in replace_defaults.keys():
+            print(f"replace defaults drop: col={col} val={replace_defaults[col][0]}")
+            for log in lst_of_loggers:
+                log.info(f"replace defaults drop: col={col} val={replace_defaults[col][0]}")
+            indices_to_drop = df_balrog[df_balrog[col] == replace_defaults[col][0]].index
+            df_balrog.drop(indices_to_drop, inplace=True)
     elif apply_replace_defaults is None:
         print("No default replace")
         for log in lst_of_loggers:
@@ -134,8 +144,7 @@ def create_balrog_subset(path_all_balrog_data, path_save, path_log, name_save_fi
         plot_data=plot_color,
         plot_name=f"unsheared/mag"
     )
-    for k in df_balrog.keys():
-        print(k)
+
     for log in lst_of_loggers:
         log.info(f"length of all balrog objects {len(df_balrog)}")
     print(f"length of all balrog objects {len(df_balrog)}")
@@ -204,7 +213,7 @@ if __name__ == '__main__':
     path = os.path.abspath(sys.path[0])
     path_data = "/Users/P.Gebhardt/Development/PhD/data"
     path_output = "/Users/P.Gebhardt/Development/PhD/output/Balrog"
-    no_samples = 250000  # int(3E6)  # int(8E6)
+    no_samples = int(3E6)  # int(3E6)  # int(3E6)  # int(8E6)
 
     dict_fill_na = {
         'unsheared/snr': (-10, 2.0),
@@ -241,14 +250,14 @@ if __name__ == '__main__':
     }
 
     create_balrog_subset(
-        path_all_balrog_data=f"{path_data}/balrog_training_no_cuts_26303386.pkl",
+        path_all_balrog_data=f"{path_data}/balrog_training_no_cuts_20208363.pkl",
         path_save=path_output,
         path_log=f"{path_output}/Logs/",
-        name_save_file="gandalf_training_data_odetec_ncuts_rdef_rnan",
+        name_save_file="gandalf_training_data_odet_ncuts_ndef_rnan",
         number_of_samples=no_samples,
         only_detected=True,
         apply_fill_na="Default",  # "Default"
-        apply_replace_defaults="Default",  # "Default"
+        apply_replace_defaults=None,  # "Default"
         apply_object_cut=False,
         apply_flag_cut=False,
         apply_unsheared_mag_cut=False,
