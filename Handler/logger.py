@@ -33,7 +33,7 @@ class LoggerHandler:
         """
 
         # Create variables
-        _log_folder_path = log_folder_path  # _root_directory + "\\src\\main\\files\\log\\"
+        _log_folder_path = log_folder_path
         _logger_name = logger_dict["logger_name"]
 
         # Set logging formats

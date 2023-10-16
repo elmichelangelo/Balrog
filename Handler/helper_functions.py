@@ -225,7 +225,7 @@ def calc_mag(data_frame, flux_col, mag_col, bins):
     return data_frame
 
 
-def calc_color(data_frame, mag_type, flux_col, mag_col, bins, plot_name, plot_data=False):
+def calc_color(cfg, data_frame, mag_type, flux_col, mag_col, bins, save_name):
     """"""
 
     if isinstance(mag_col, tuple):
@@ -263,19 +263,35 @@ def calc_color(data_frame, mag_type, flux_col, mag_col, bins, plot_name, plot_da
             lst_mag_cols.append(f"{mag}_{next_b}")
             lst_mag_parameter.append(f"{mag_type[0]} {next_b}")
             break
-    if plot_data is True:
-        plot_chain(
+    if cfg['PLT_COLOR'] is True:
+        plot_corner(
             data_frame=data_frame,
             columns=lst_color_cols,
-            parameter=lst_color_parameter,
-            plot_name=f"color_{plot_name}"
+            labels=lst_color_parameter,
+            save_name=f"{cfg['PATH_OUTPUT']}/Plots/color_{save_name}.png",
+            save_plot=cfg['SAVE_PLOT'],
+            show_plot=cfg['SHOW_PLOT']
         )
-        plot_chain(
+        plot_corner(
             data_frame=data_frame,
             columns=lst_mag_cols,
-            parameter=lst_mag_parameter,
-            plot_name=f"mag_{plot_name}"
+            labels=lst_mag_parameter,
+            save_name=f"{cfg['PATH_OUTPUT']}/Plots/mag_{save_name}.png",
+            save_plot=cfg['SAVE_PLOT'],
+            show_plot=cfg['SHOW_PLOT']
         )
+        # plot_chain(
+        #     data_frame=data_frame,
+        #     columns=lst_color_cols,
+        #     parameter=lst_color_parameter,
+        #     save_name=f"color_{save_name}"
+        # )
+        # plot_chain(
+        #     data_frame=data_frame,
+        #     columns=lst_mag_cols,
+        #     parameter=lst_mag_parameter,
+        #     save_name=f"mag_{save_name}"
+        # )
     return data_frame
 
 
@@ -409,3 +425,15 @@ def apply_loggrid(x, y, grid, xmin=10, xmax=300, xsteps=20, ymin=0.5, ymax=5, ys
     res = np.zeros(len(x))
     res = grid[indexx, indexy]
     return res
+
+
+def get_os():
+    if os.name == 'nt':
+        return 'Windows'
+    elif os.name == 'posix':
+        if 'darwin' in os.uname().sysname.lower():
+            return 'Mac'
+        else:
+            return 'Linux'
+    else:
+        return 'Unknown OS'

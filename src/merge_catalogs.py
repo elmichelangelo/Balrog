@@ -10,13 +10,12 @@ import fitsio
 import numpy as np
 import pandas as pd
 import healpy as hp
+import yaml
+import argparse
 from Handler import *
-# from Handler.cut_functions import *
 
 
-def read_catalogs(path_metacal, path_detection, path_deep_field, path_bdf_info, path_sompz_cosmos, path_survey,
-                  metacal_cols, detection_cols, deep_field_cols, survey_cols, nside, lst_of_loggers, plot_healpix=False,
-                  show_plot=False, save_plot=False):
+def read_catalogs(cfg, lst_of_loggers):
     """"""
     df_mcal = None
     df_detect = None
@@ -28,22 +27,22 @@ def read_catalogs(path_metacal, path_detection, path_deep_field, path_bdf_info, 
     for log in lst_of_loggers:
         log.info("Start read catalogs")
 
-    if path_metacal is not None:
+    if cfg["USE_MCAL"] is True:
         # Read h5py file
         for log in lst_of_loggers:
-            log.info(f"Read {path_metacal}")
-        metacal_data = h5py.File(path_metacal, 'r')
+            log.info(f"Read {cfg['PATH_DATA']+cfg['FILENAME_MCAL']}")
+        metacal_data = h5py.File(cfg["PATH_DATA"]+cfg["FILENAME_MCAL"], 'r')
 
         # Add columns to DataFrame
         df_mcal = pd.DataFrame()
-        for i, col in enumerate(metacal_cols):
+        for i, col in enumerate(cfg["MCAL_COLS"]):
             if col =="unsheared/weight":
                 df_mcal[col] = np.array(metacal_data['catalog/' + col])
             else:
                 df_mcal[col] = np.array(metacal_data['catalog/' + col]).byteswap().newbyteorder("<")
 
         # Rename some columns
-        df_mcal = df_mcal[metacal_cols]
+        df_mcal = df_mcal[cfg["MCAL_COLS"]]
         for log in lst_of_loggers:
             log.info(f"Rename Col's: unsheared/bal_id': 'bal_id and unsheared/coadd_object_id': 'COADD_OBJECT_ID")
         df_mcal = df_mcal.rename(columns={'unsheared/bal_id': 'bal_id'})
@@ -61,15 +60,15 @@ def read_catalogs(path_metacal, path_detection, path_deep_field, path_bdf_info, 
         print(df_mcal.isnull().sum())
         print(df_mcal.isnull().sum().sum())
 
-    if path_detection is not None:
+    if cfg["USE_DETECT"] is True:
         # Read fits file
         for log in lst_of_loggers:
-            log.info(f"Read {path_detection}")
-        detection_data = Table(fitsio.read(path_detection).byteswap().newbyteorder())
+            log.info(f"Read {cfg['PATH_DATA']+cfg['FILENAME_DETECT']}")
+        detection_data = Table(fitsio.read(cfg["PATH_DATA"]+cfg["FILENAME_DETECT"]).byteswap().newbyteorder())
 
         # Add columns to DataFrame
         df_detect = pd.DataFrame()
-        for i, col in enumerate(detection_cols):
+        for i, col in enumerate(cfg["DETECT_COLS"]):
             df_detect[col] = detection_data[col]
 
         for log in lst_of_loggers:
@@ -83,7 +82,8 @@ def read_catalogs(path_metacal, path_detection, path_deep_field, path_bdf_info, 
         # Get HPIX Index
         for log in lst_of_loggers:
             log.info(f"Get HPIX Index")
-        df_detect[f"HPIX_{nside}"] = DeclRaToIndex(np.array(df_detect["true_dec"]), np.array(df_detect["true_ra"]), nside)
+        df_detect[f"HPIX_{cfg['NSIDE']}"] = DeclRaToIndex(
+            np.array(df_detect["true_dec"]), np.array(df_detect["true_ra"]), cfg["NSIDE"])
 
         # Verbose
         print('Length of detection catalog: {}'.format(len(df_detect)))
@@ -98,13 +98,13 @@ def read_catalogs(path_metacal, path_detection, path_deep_field, path_bdf_info, 
             log.info(df_detect.isnull().sum().sum())
 
         # Plot Data
-        if plot_healpix is True:
+        if cfg["PLT_HEALPIX"] is True:
             for log in lst_of_loggers:
                 log.info(f"plot_healpix")
             import healpy as hp
-            arr_hpix = df_detect[f"HPIX_{nside}"].to_numpy()
+            arr_hpix = df_detect[f"HPIX_{cfg['NSIDE']}"].to_numpy()
             arr_flux = df_detect["ID"].to_numpy()
-            npix = hp.nside2npix(nside)
+            npix = hp.nside2npix(cfg["NSIDE"])
             hpxmap = np.zeros(npix, dtype=np.float)
             for idx, pix in enumerate(arr_hpix):
                 hpxmap[pix] = arr_flux[idx]
@@ -113,14 +113,14 @@ def read_catalogs(path_metacal, path_detection, path_deep_field, path_bdf_info, 
                 norm="hist",
                 nest=True
             )
-            if show_plot is True:
+            if cfg["SHOW_PLOT"] is True:
                 plt.show()
 
-    if path_deep_field is not None:
+    if cfg["USE_DEEP_FIELD"] is not None:
         for log in lst_of_loggers:
-            log.info(f"Read {path_deep_field}")
+            log.info(f"Read {cfg['PATH_DATA']}{cfg['FILENAME_DEEP_FIELD']}")
         # Read pickle deep field file
-        infile = open(path_deep_field, 'rb')
+        infile = open(cfg["PATH_DATA"]+cfg["FILENAME_DEEP_FIELD"], 'rb')
         # load pickle as pandas dataframe
         deep_field = pd.DataFrame(pickle.load(infile, encoding='latin1'))
         # close file
@@ -129,7 +129,7 @@ def read_catalogs(path_metacal, path_detection, path_deep_field, path_bdf_info, 
         # Read fits bdf info file
         for log in lst_of_loggers:
             log.info(f"Read fits bdf info file")
-        bdf_info = Table(fitsio.read(path_bdf_info).byteswap().newbyteorder()).to_pandas()
+        bdf_info = Table(fitsio.read(cfg["PATH_DATA"]+cfg["FILENAME_BDF_SIZE"]).byteswap().newbyteorder()).to_pandas()
 
         for log in lst_of_loggers:
             log.info(f"merge deep field and bdf")
@@ -155,8 +155,8 @@ def read_catalogs(path_metacal, path_detection, path_deep_field, path_bdf_info, 
 
         # READ IN REDSHIFT CATALOGUE
         for log in lst_of_loggers:
-            log.info(f"Read {path_sompz_cosmos}")
-        df_cosmos_z = pd.read_hdf(path_sompz_cosmos)
+            log.info(f"Read {cfg['PATH_DATA']+cfg['FILENAME_COSMOS']}")
+        df_cosmos_z = pd.read_hdf(cfg["PATH_DATA"]+cfg["FILENAME_COSMOS"])
 
         print(len(df_deep_field))
         print(len(df_cosmos), 'DES DEEP')
@@ -243,27 +243,10 @@ def read_catalogs(path_metacal, path_detection, path_deep_field, path_bdf_info, 
             log.info(df_cosmos.isnull().sum())
             log.info(df_cosmos.isnull().sum().sum())
 
-    if path_survey is not None:
-        df_survey = pd.DataFrame()
-        for idx, file in enumerate(os.listdir(path_survey)):
-            if "fits" in file:
-                # Read fits file
-                for log in lst_of_loggers:
-                    log.info(f"Read {path_survey}/{file}")
-                survey_data = Table(fitsio.read(f"{path_survey}/{file}", columns=survey_cols))
-
-                # Add columns to DataFrame
-                df_survey_tmp = pd.DataFrame()
-                for i, col in enumerate(survey_cols):
-                    print(i, col)
-                    df_survey_tmp[col] = survey_data[col]
-                if idx == 0:
-                    df_survey = df_survey_tmp
-                else:
-                    df_survey = pd.concat([df_survey, df_survey_tmp], ignore_index=True)
-                print(df_survey_tmp.shape)
-                for log in lst_of_loggers:
-                    log.info(df_survey_tmp.shape)
+    if cfg["USE_SURVEY_COND"] is True:
+        infile = open(cfg["PATH_DATA"] + cfg["FILENAME_SURVEY"], 'rb')
+        df_survey = pd.DataFrame(pickle.load(infile, encoding='latin1'))
+        infile.close()
 
         # Verbose
         print('Length of survey catalog: {}'.format(len(df_survey)))
@@ -277,12 +260,12 @@ def read_catalogs(path_metacal, path_detection, path_deep_field, path_bdf_info, 
             log.info(df_survey.shape)
 
         # Plot Data
-        if plot_healpix is True:
+        if cfg["PLT_HEALPIX"] is True:
             for log in lst_of_loggers:
                 log.info(f"Plot Healpix")
-            arr_hpix = df_survey[f"HPIX_{nside}"].to_numpy()
+            arr_hpix = df_survey[f"HPIX_{cfg['NSIDE']}"].to_numpy()
             arr_flux = df_survey[f"AIRMASS_WMEAN_R"].to_numpy()
-            npix = hp.nside2npix(nside)
+            npix = hp.nside2npix(cfg['NSIDE'])
             hpxmap = np.zeros(npix, dtype=np.float)
             for idx, pix in enumerate(arr_hpix):
                 hpxmap[pix] = arr_flux[idx]
@@ -290,7 +273,7 @@ def read_catalogs(path_metacal, path_detection, path_deep_field, path_bdf_info, 
                 hpxmap,
                 norm="hist",
                 nest=True)
-            if show_plot is True:
+            if cfg["SHOW_PLOT"] is True:
                 plt.show()
     return df_mcal, df_deep_field, df_cosmos, df_detect, df_survey
 
@@ -413,62 +396,52 @@ def DeclRaToIndex(decl, RA, NSIDE):
     return hp.pixelfunc.ang2pix(NSIDE, np.radians(-decl + 90.), np.radians(360. + RA), nest=True).astype(int)
 
 
-def write_data_2_file(df_generated_data, save_path, save_name, protocol, lst_of_loggers):
+def write_data_2_file(cfg, df_generated_data, save_name, lst_of_loggers):
     """"""
     for log in lst_of_loggers:
         log.info(f"Save data...")
-    if protocol == 2:
+    if cfg["PROTOCOL"] == 2:
         for log in lst_of_loggers:
             log.info(f"Use protocol 2")
-            log.info(f"Save as {save_path}{save_name}")
-        with open(f"{save_path}{save_name}", "wb") as f:
+            log.info(f"Save as {cfg['PATH_OUTPUT']}/Catalogs/{save_name}")
+        with open(f"{cfg['PATH_OUTPUT']}/Catalogs/{save_name}", "wb") as f:
             pickle.dump(df_generated_data.to_dict(), f, protocol=2)
     else:
         for log in lst_of_loggers:
             log.info(f"Use protocol 5")
-            log.info(f"Save as {save_path}{save_name}")
-        df_generated_data.to_pickle(f"{save_path}{save_name}")
+            log.info(f"Save as {cfg['PATH_OUTPUT']}/Catalogs/{save_name}")
+        df_generated_data.to_pickle(f"{cfg['PATH_OUTPUT']}/Catalogs/{save_name}")
 
 
-def main(path_metacal, path_detection, path_deep_field, path_bdf_info, path_sompz_cosmos, path_survey, path_save,
-         path_log, metacal_cols, detection_cols, deep_field_cols, survey_cols, only_detected, nside, protocol,
-         dict_defaults, show_plot, save_plot, plot_healpix):
+def main(cfg):
     """"""
+    log_lvl = logging.INFO
+    if cfg["LOGGING_LEVEL"] == "DEBUG":
+        log_lvl = logging.DEBUG
+    elif cfg["LOGGING_LEVEL"] == "ERROR":
+        log_lvl = logging.ERROR
 
     # Initialize the logger
     start_window_logger = LoggerHandler(
-        logger_dict= {"logger_name": "start window",
-                      "info_logger": INFO_LOGGER,
-                      "error_logger": ERROR_LOGGER,
-                      "debug_logger": DEBUG_LOGGER,
-                      "stream_logger": STREAM_LOGGER,
-                      "stream_logging_level": LOGGING_LEVEL},
-        log_folder_path=path_log
+        logger_dict= {"logger_name": "merge catalogs",
+                      "info_logger": cfg['INFO_LOGGER'],
+                      "error_logger": cfg['ERROR_LOGGER'],
+                      "debug_logger": cfg['DEBUG_LOGGER'],
+                      "stream_logger": cfg['STREAM_LOGGER'],
+                      "stream_logging_level": log_lvl},
+        log_folder_path=f"{cfg['PATH_DATA']}/Logs"
     )
 
     # Get the list of loggers
     lst_of_loggers = start_window_logger.lst_of_loggers
     # Write status to logger
     for log in lst_of_loggers:
-        log.info("Start create balrog training dataset")
+        log.info("Start merge catalogs")
 
     # Read all catalogs
     df_mcal, df_deep_field, df_cosmos, df_detect, df_survey = read_catalogs(
-        path_metacal=path_metacal,
-        path_detection=path_detection,
-        path_deep_field=path_deep_field,
-        path_bdf_info=path_bdf_info,
-        path_sompz_cosmos=path_sompz_cosmos,
-        path_survey=path_survey,
-        metacal_cols=metacal_cols,
-        detection_cols=detection_cols,
-        deep_field_cols=deep_field_cols,
-        survey_cols=survey_cols,
-        nside=nside,
-        plot_healpix=plot_healpix,
-        lst_of_loggers=lst_of_loggers,
-        show_plot=show_plot,
-        save_plot=save_plot
+        cfg=cfg,
+        lst_of_loggers=lst_of_loggers
     )
 
     if df_mcal is not None and df_detect is not None and df_deep_field is not None and df_survey is not None:
@@ -485,149 +458,63 @@ def main(path_metacal, path_detection, path_deep_field, path_bdf_info, path_somp
         print("Drop defaults")
         for log in lst_of_loggers:
             log.info("Drop defaults")
-        for col in dict_defaults.keys():
-            print(f"replace defaults drop: col={col} val={dict_defaults[col]}")
-            for log in lst_of_loggers:
-                log.info(f"replace defaults drop: col={col} val={dict_defaults[col]}")
-            indices_to_drop = df_merged[df_merged[col] == dict_defaults[col]].index
-            df_merged.drop(indices_to_drop, inplace=True)
-        len_after = len(df_merged)
-        for k in df_merged.keys():
-            print(k, df_merged[k].min(), df_merged[k].max())
-        print("Dropped {} rows".format(len_before - len_after))
-        # Save Data to File
-        write_data_2_file(
-            df_generated_data=df_merged,
-            save_path=path_save,
-            save_name=f"balrog_training_no_cuts_{len(df_merged)}.pkl",
-            protocol=protocol,
-            lst_of_loggers=lst_of_loggers
-        )
+        if cfg["REPLACE_DEFAULTS"] is True:
+            for col in cfg["DEFAULTS"].keys():
+                print(f"replace defaults drop: col={col} val={cfg['DEFAULTS'][col]}")
+                for log in lst_of_loggers:
+                    log.info(f"replace defaults drop: col={col} val={cfg['DEFAULTS'][col]}")
+                indices_to_drop = df_merged[df_merged[col] == cfg['DEFAULTS'][col]].index
+                df_merged.drop(indices_to_drop, inplace=True)
+            len_after = len(df_merged)
+            for k in df_merged.keys():
+                print(k, df_merged[k].min(), df_merged[k].max())
+            print("Dropped {} rows".format(len_before - len_after))
 
-        write_data_2_file(
-            df_generated_data=df_cosmos,
-            save_path=path_save,
-            save_name=f"deep_cosmos_{len(df_cosmos)}.pkl",
-            protocol=protocol,
-            lst_of_loggers=lst_of_loggers
-        )
+        # Save Data to File
+        if cfg["SAVE_MERGED_CAT"] is True:
+            write_data_2_file(
+                cfg=cfg,
+                df_generated_data=df_merged,
+                save_name=f"{cfg['FILENAME_SAVE_MERGED_CAT']}{len(df_merged)}.pkl",
+                lst_of_loggers=lst_of_loggers
+            )
+        if cfg["SAVE_COSMOS"] is True:
+            write_data_2_file(
+                cfg=cfg,
+                df_generated_data=df_cosmos,
+                save_name=f"{cfg['FILENAME_SAVE_COSMOS']}{len(df_cosmos)}.pkl",
+                lst_of_loggers=lst_of_loggers
+            )
 
 
 if __name__ == "__main__":
-    path = os.path.abspath(sys.path[0])
-    path_data = "/Users/P.Gebhardt/Development/PhD/data"
-    path_output = "/Users/P.Gebhardt/Development/PhD/output/Balrog"
+    sys.path.append(os.path.dirname(__file__))
+    path = os.path.abspath(sys.path[-1])
+    if get_os() == "Mac":
+        config_file_name = "mac.cfg"
+    elif get_os() == "Windows":
+        config_file_name = "windows.cfg"
+    elif get_os() == "Linux":
+        config_file_name = "linux.cfg"
+    else:
+        print(f"OS Error: {get_os()}")
 
-    NSIDE = 4096
-
-    other_metacal_cols = [
-        'unsheared/coadd_object_id',
-        'unsheared/ra',
-        'unsheared/dec',
-        'unsheared/snr',
-        'unsheared/size_ratio',
-        'unsheared/flags',
-        'unsheared/bal_id',
-        'unsheared/T',
-        'unsheared/weight',
-        'unsheared/extended_class_sof',
-        'unsheared/flags_gold',
-        'unsheared/e_1',
-        'unsheared/e_2'
-    ]
-
-    dict_defaults = {
-        'BDF_FLUX_DERED_CALIB_J': -9999000000.0,
-        'BDF_FLUX_DERED_CALIB_H': -9999000000.0,
-        'BDF_FLUX_DERED_CALIB_K': -9999000000.0,
-        'BDF_MAG_DERED_CALIB_J': -9999000000.0,
-        'BDF_MAG_DERED_CALIB_H': -9999000000.0,
-        'BDF_MAG_DERED_CALIB_K': -9999000000.0,
-        'BDF_FLUX_ERR_DERED_CALIB_G': 9999000000.0,
-        'BDF_FLUX_ERR_DERED_CALIB_Z': 9999000000.0,
-        'BDF_FLUX_ERR_DERED_CALIB_J': 9999000000.0,
-        'BDF_FLUX_ERR_DERED_CALIB_H': 9999000000.0,
-        'BDF_FLUX_ERR_DERED_CALIB_K': 9999000000.0,
-        'unsheared/snr': -7070.360705084288,
-        'unsheared/T': -9999,
-        "unsheared/e_1": -9999,
-        "unsheared/e_2": -9999,
-        'AIRMASS_WMEAN_R': -9999,
-        'AIRMASS_WMEAN_I': -9999,
-        'AIRMASS_WMEAN_Z': -9999,
-        'FWHM_WMEAN_R': -9999,
-        'FWHM_WMEAN_I': -9999,
-        'FWHM_WMEAN_Z': -9999,
-        'MAGLIM_R': -9999,
-        'MAGLIM_I': -9999,
-        'MAGLIM_Z': -9999
-    }
-
-    main(
-        path_metacal=f"{path_data}/balrog_mcal_stack-y3v02-0-riz-noNB-mcal_y3-merged_v1.2.h5",
-        path_detection=f"{path_data}/balrog_detection_catalog_sof_y3-merged_v1.2.fits",
-        # path_deep_field=f"{path_data}/deep_ugriz.mof02_sn.jhk.ff04_c.jhk.ff02_052020_realerrors_May20calib.pkl",
-        path_deep_field=f"{path_data}/deep_field_flux_mag_T_G_ID_tilename.pkl",
-        path_bdf_info=f"{path_data}/DF_BDFT_BDFG.fits",
-        path_sompz_cosmos=f"{path_data}/sompz_cosmos.h5",
-        path_survey=f"{path_data}/sct2",
-        path_save=f"{path_output}/Catalogs/",
-        path_log=f"{path_output}/Logs/",
-        metacal_cols=other_metacal_cols + ['unsheared/flux_{}'.format(i) for i in 'irz'] + ['unsheared/flux_err_{}'.format(i) for i in 'irz'],
-        dict_defaults=dict_defaults,
-        protocol=None,
-        detection_cols=[
-            'bal_id',
-            'true_id',
-            'detected',
-            'true_ra',
-            'true_dec',
-            'match_flag_1.5_asec',
-            'flags_foreground',
-            'flags_badregions',
-            'flags_footprint'
-        ],
-        deep_field_cols=[
-            "ID",
-            "RA",
-            "DEC",
-            "BDF_T",
-            "BDF_G_0",
-            "BDF_G_1",
-            "BDF_FLUX_DERED_CALIB_U",
-            "BDF_FLUX_DERED_CALIB_G",
-            "BDF_FLUX_DERED_CALIB_R",
-            "BDF_FLUX_DERED_CALIB_I",
-            "BDF_FLUX_DERED_CALIB_Z",
-            "BDF_FLUX_DERED_CALIB_J",
-            "BDF_FLUX_DERED_CALIB_H",
-            "BDF_FLUX_DERED_CALIB_KS",
-            "BDF_FLUX_ERR_DERED_CALIB_U",
-            "BDF_FLUX_ERR_DERED_CALIB_G",
-            "BDF_FLUX_ERR_DERED_CALIB_R",
-            "BDF_FLUX_ERR_DERED_CALIB_I",
-            "BDF_FLUX_ERR_DERED_CALIB_Z",
-            "BDF_FLUX_ERR_DERED_CALIB_J",
-            "BDF_FLUX_ERR_DERED_CALIB_H",
-            "BDF_FLUX_ERR_DERED_CALIB_KS"
-
-        ],
-        survey_cols=[
-            f"HPIX_{NSIDE}",
-            "AIRMASS_WMEAN_R",
-            "AIRMASS_WMEAN_I",
-            "AIRMASS_WMEAN_Z",
-            "FWHM_WMEAN_R",
-            "FWHM_WMEAN_I",
-            "FWHM_WMEAN_Z",
-            "MAGLIM_R",
-            "MAGLIM_I",
-            "MAGLIM_Z",
-            "EBV_SFD98"
-        ],
-        only_detected=False,
-        nside=NSIDE,
-        show_plot=False,
-        save_plot=False,
-        plot_healpix=False
+    parser = argparse.ArgumentParser(description='Start merge catalogs')
+    parser.add_argument(
+        '--config_filename',
+        "-cf",
+        type=str,
+        nargs=1,
+        required=False,
+        default=config_file_name,
+        help='Name of config file'
     )
+    args = parser.parse_args()
+
+    if isinstance(args.config_filename, list):
+        args.config_filename = args.config_filename[0]
+
+    with open(f"{path}/../config/{args.config_filename}", 'r') as fp:
+        cfg = yaml.load(fp, Loader=yaml.Loader)
+
+    main(cfg=cfg)
