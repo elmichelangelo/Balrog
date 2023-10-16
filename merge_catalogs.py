@@ -429,7 +429,7 @@ def main(cfg):
                       "debug_logger": cfg['DEBUG_LOGGER'],
                       "stream_logger": cfg['STREAM_LOGGER'],
                       "stream_logging_level": log_lvl},
-        log_folder_path=f"{cfg['PATH_DATA']}/Logs"
+        log_folder_path=f"{cfg['PATH_OUTPUT']}Logs/"
     )
 
     # Get the list of loggers
