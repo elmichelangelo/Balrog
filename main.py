@@ -42,8 +42,8 @@ def create_balrog_subset(cfg):
     # Write status to logger
     for log in lst_of_loggers:
         log.info("Start Create balrog subset")
-        log.info(f"open balrog data {cfg['PATH_DATA']+cfg['FILENAME_MERGED_CAT']}")
-    df_balrog = open_all_balrog_dataset(cfg['PATH_DATA']+cfg['FILENAME_MERGED_CAT'])
+        log.info(f"open balrog data {cfg['PATH_OUTPUT']}Catalogs/{cfg['FILENAME_MERGED_CAT']}")
+    df_balrog = open_all_balrog_dataset(f"{cfg['PATH_OUTPUT']}Catalogs/{cfg['FILENAME_MERGED_CAT']}")
     for log in lst_of_loggers:
         log.info("Rename col's: BDF_FLUX_DERED_CALIB_KS: BDF_FLUX_DERED_CALIB_ and "
                  "BDF_FLUX_ERR_DERED_CALIB_KS: BDF_FLUX_ERR_DERED_CALIB_K")
