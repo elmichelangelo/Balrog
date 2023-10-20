@@ -62,6 +62,12 @@ def create_balrog_subset(cfg):
         log.info(df_balrog.isna().sum())
         log.info(df_balrog.isna().sum().sum())
 
+    if cfg['ONLY_DETECT'] is True:
+        df_balrog = df_balrog[df_balrog["detected"] == 1]
+        print(f"length of only detected balrog objects {len(df_balrog)}")
+        for log in lst_of_loggers:
+            log.info(f"length of only detected balrog objects {len(df_balrog)}")
+
     if cfg['APPLY_FILL_NA'] is True:
         print(f"start fill na default")
         for log in lst_of_loggers:
@@ -127,11 +133,6 @@ def create_balrog_subset(cfg):
         log.info(f"length of all balrog objects {len(df_balrog)}")
     print(f"length of all balrog objects {len(df_balrog)}")
 
-    if cfg['ONLY_DETECT'] is True:
-        df_balrog = df_balrog[df_balrog["detected"] == 1]
-        print(f"length of only detected balrog objects {len(df_balrog)}")
-        for log in lst_of_loggers:
-            log.info(f"length of only detected balrog objects {len(df_balrog)}")
     if cfg['CUT_OBJECT'] is True:
         print(f"Only detected objects")
         for log in lst_of_loggers:
@@ -167,9 +168,9 @@ def create_balrog_subset(cfg):
         for log in lst_of_loggers:
             log.info(f"mask cuts")
         df_balrog = mask_cut(data_frame=df_balrog, master=cfg['PATH_DATA']+cfg['FILENAME_MASTER_CAT'])
-    print(f"length of catalog after applying unsheared cuts {len(df_balrog)}")
+    print(f"length of catalog after cut section {len(df_balrog)}")
     for log in lst_of_loggers:
-        log.info(f"length of catalog after applying unsheared cuts {len(df_balrog)}")
+        log.info(f"length of catalog after cut section {len(df_balrog)}")
 
     number_of_samples = cfg['NSAMPLES']
     if number_of_samples is None:
