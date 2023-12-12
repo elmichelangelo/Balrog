@@ -645,6 +645,164 @@ def generate_wide_mock(cfg, df_mock_deep, df_true_deep):
     """"""
     df_mock = df_mock_deep.copy()
 
+    cov_r_mag = np.cov(np.array([
+        df_true_deep["BDF_MAG_DERED_CALIB_R"].values,
+        df_true_deep["unsheared/mag_r"].values
+    ]))
+
+    cov_i_mag = np.cov(np.array([
+        df_true_deep["BDF_MAG_DERED_CALIB_I"].values,
+        df_true_deep["unsheared/mag_i"].values
+    ]))
+
+    cov_z_mag = np.cov(np.array([
+        df_true_deep["BDF_MAG_DERED_CALIB_Z"].values,
+        df_true_deep["unsheared/mag_z"].values
+    ]))
+
+    print(f"covariance matrix r-band between deep and wide field mag: {cov_r_mag}")
+    print(f"covariance matrix i-band between deep and wide field mag: {cov_i_mag}")
+    print(f"covariance matrix z-band between deep and wide field mag: {cov_z_mag}")
+
+    print(f"var r: sqrt({cov_r_mag[0, 1]})={np.sqrt(cov_r_mag[0, 1])}")
+    print(f"var i: sqrt({cov_i_mag[0, 1]})={np.sqrt(cov_i_mag[0, 1])}")
+    print(f"var z: sqrt({cov_z_mag[0, 1]})={np.sqrt(cov_z_mag[0, 1])}")
+
+    _alpha = 1.15
+    _beta = 100
+    arr_normal_r_mag = np.random.normal(
+        loc=0,
+        scale=np.sqrt(cov_r_mag[0, 1]),
+        size=cfg["SIZE_MOCK"]
+    )
+    df_mock.loc[:, f"unsheared/mag_r"] = \
+        _alpha * df_mock[f"BDF_MAG_DERED_CALIB_R"].values + (_beta * (1 - arr_normal_r_mag) / arr_normal_r_mag)
+
+    arr_normal_i_mag = np.random.normal(
+        loc=0,
+        scale=np.sqrt(cov_i_mag[0, 1]),
+        size=cfg["SIZE_MOCK"]
+    )
+    df_mock.loc[:, f"unsheared/mag_i"] = \
+        _alpha * df_mock[f"BDF_MAG_DERED_CALIB_I"].values + (_beta * (1 - arr_normal_i_mag) / arr_normal_i_mag)
+
+    arr_normal_z_mag = np.random.normal(
+        loc=0,
+        scale=np.sqrt(cov_z_mag[0, 1]),
+        size=cfg["SIZE_MOCK"]
+    )
+    df_mock.loc[:, f"unsheared/mag_z"] = \
+        _alpha * df_mock[f"BDF_MAG_DERED_CALIB_Z"].values + (_beta * (1 - arr_normal_z_mag) / arr_normal_z_mag)
+
+    cov_r_mag_mock = np.cov(np.array(
+        [df_mock["BDF_MAG_DERED_CALIB_R"],
+         df_mock["unsheared/mag_r"]]))
+
+    cov_i_mag_mock = np.cov(np.array(
+        [df_mock["BDF_MAG_DERED_CALIB_I"],
+         df_mock["unsheared/mag_i"]]))
+
+    cov_z_mag_mock = np.cov(np.array(
+        [df_mock["BDF_MAG_DERED_CALIB_Z"],
+         df_mock["unsheared/mag_z"]]))
+
+    print(f"covariance matrix r-band between deep and wide field mag mock: {cov_r_mag_mock}")
+    print(f"covariance matrix i-band between deep and wide field mag mock: {cov_i_mag_mock}")
+    print(f"covariance matrix z-band between deep and wide field mag mock: {cov_z_mag_mock}")
+
+    print(f"var r mock: sqrt({cov_r_mag_mock[0, 1]})={np.sqrt(cov_r_mag_mock[0, 1])}")
+    print(f"var i mock: sqrt({cov_i_mag_mock[0, 1]})={np.sqrt(cov_i_mag_mock[0, 1])}")
+    print(f"var z mock: sqrt({cov_z_mag_mock[0, 1]})={np.sqrt(cov_z_mag_mock[0, 1])}")
+
+    plot_compare_corner(
+        data_frame_generated=df_mock,
+        data_frame_true=df_true_deep,
+        columns=[
+            "unsheared/mag_r",
+            "unsheared/mag_i",
+            "unsheared/mag_i"
+        ],
+        labels=["mag_r", "mag_i", "mag_z"],
+        title="title",
+        ranges=None,
+        show_plot=cfg["SHOW_PLOT_MOCK"],
+        save_plot=cfg["SAVE_PLOT_MOCK"],
+        save_name=f"{cfg['PATH_OUTPUT']}/compare_meas_mag.png"
+    )
+
+    # dict_wide_field[f"mock mag r wide field"] = flux2mag(dict_wide_field[f"generated flux r wide field"])
+    # dict_wide_field[f"mock mag i wide field"] = flux2mag(dict_wide_field[f"generated flux i wide field"])
+    # dict_wide_field[f"mock mag z wide field"] = flux2mag(dict_wide_field[f"generated flux z wide field"])
+    #
+    # arr_gen_ri_df = dict_wide_field[f"generated mag r deep field"] - dict_wide_field[f"generated mag i deep field"]
+    # arr_gen_iz_df = dict_wide_field[f"generated mag i deep field"] - dict_wide_field[f"generated mag z deep field"]
+    # arr_gen_ri_wf = dict_wide_field[f"generated mag r wide field"] - dict_wide_field[f"generated mag i wide field"]
+    # arr_gen_iz_wf = dict_wide_field[f"generated mag i wide field"] - dict_wide_field[f"generated mag z wide field"]
+    #
+    # cov_matrix_gen_df = np.cov(np.array([arr_gen_ri_df, arr_gen_iz_df]))
+    # cov_matrix_gen_wf = np.cov(np.array([arr_gen_ri_wf, arr_gen_iz_wf]))
+    # cov_matrix_mcal_df = np.cov(np.array([arr_mcal_df_ri_mag, arr_mcal_df_iz_mag]))
+    # cov_matrix_mcal_wf = np.cov(np.array([arr_mcal_wf_ri_mag, arr_mcal_wf_iz_mag]))
+    #
+    # print("generated covariance matrix r-i, i-z deep field", cov_matrix_gen_df)
+    # print("generated covariance matrix r-i, i-z wide field", cov_matrix_gen_wf)
+    # print("metacal covariance matrix r-i, i-z deep field", cov_matrix_mcal_df)
+    # print("metacal covariance matrix r-i, i-z wide field", cov_matrix_mcal_wf)
+    #
+    # if plot_data is True:
+    #     chaincon = ChainConsumer()
+    #     df_gen_deep_field = pd.DataFrame({
+    #         "generated mag r deep field": np.array(dict_wide_field["generated mag r deep field"]),
+    #         "generated mag i deep field": np.array(dict_wide_field["generated mag i deep field"]),
+    #         "generated mag z deep field": np.array(dict_wide_field["generated mag z deep field"]),
+    #     })
+    #     arr_gen_deep_field = df_gen_deep_field.to_numpy()
+    #     df_deep_field = pd.DataFrame({
+    #         "deep r mag": np.array(dict_wide_field["metacal mag r deep field"]),
+    #         "deep i mag": np.array(dict_wide_field["metacal mag i deep field"]),
+    #         "deep z mag": np.array(dict_wide_field["metacal mag z deep field"])
+    #     })
+    #     arr_deep_field = df_deep_field.to_numpy()
+    #     df_gen_wide_field = pd.DataFrame({
+    #         "generated mag r wide field": np.array(dict_wide_field["generated mag r wide field"]),
+    #         "generated mag i wide field": np.array(dict_wide_field["generated mag i wide field"]),
+    #         "generated mag z wide field": np.array(dict_wide_field["generated mag z wide field"]),
+    #     })
+    #     arr_gen_wide_field = df_gen_wide_field.to_numpy()
+    #     df_wide_field = pd.DataFrame({
+    #         "wide r mag": np.array(dict_wide_field["metacal mag r wide field"]),
+    #         "wide i mag": np.array(dict_wide_field["metacal mag i wide field"]),
+    #         "wide z mag": np.array(dict_wide_field["metacal mag z wide field"])
+    #     })
+    #     arr_wide_field = df_wide_field.to_numpy()
+    #     parameter = [
+    #         "r",
+    #         "i",
+    #         "z"
+    #     ]
+    #     chaincon.add_chain(arr_deep_field, parameters=parameter, name="BDF_MAG_DERED_CALIB_{R, I, Z}")
+    #     chaincon.add_chain(arr_gen_deep_field, parameters=parameter, name="generated deep field mag {R, I, Z}")
+    #     chaincon.add_chain(arr_wide_field, parameters=parameter, name="unsheared/flux_{r, i, z}")
+    #     chaincon.add_chain(arr_gen_wide_field, parameters=parameter, name="generated deep field mag {r, i, z}")
+    #     chaincon.configure(max_ticks=5, shade_alpha=0.8, tick_font_size=12, label_font_size=12)
+    #     chaincon.plotter.plot(
+    #         # filename=f"{dictionary_plot_paths['chain plot']}/chain_plot_epoch_{epoch}.png",
+    #         figsize="page",
+    #         display=True,
+    #         # truth=[
+    #         #     df_test_data["unsheared/mag_r"].mean(),
+    #         #     df_test_data["unsheared/mag_i"].mean(),
+    #         #     df_test_data["unsheared/mag_z"].mean(),
+    #         #     df_test_data["unsheared/snr"].mean(),
+    #         #     df_test_data["unsheared/size_ratio"].mean(),
+    #         #     df_test_data["unsheared/T"].mean(),
+    #         # ]
+    #     )
+    #     plt.clf()
+    #
+    #
+    # df_mock.loc[:, "unsheared/mag_r"] = df_mock["BDF_MAG_DERED_CALIB_R"].values
+
     return df_mock
 
 
