@@ -1,10 +1,11 @@
 import logging
-
+import joblib
 import pandas as pd
 from Handler.cut_functions import *
 from Handler.plot_functions import *
 from Handler.helper_functions import *
 from Handler import *
+from sklearn.preprocessing import PowerTransformer, MaxAbsScaler, MinMaxScaler, StandardScaler
 import seaborn as sns
 import os
 import sys
@@ -43,7 +44,7 @@ def create_balrog_subset(cfg):
     for log in lst_of_loggers:
         log.info("Start Create balrog subset")
         log.info(f"open balrog data {cfg['PATH_OUTPUT']}Catalogs/{cfg['FILENAME_MERGED_CAT']}")
-    df_balrog = open_all_balrog_dataset(f"{cfg['PATH_OUTPUT']}Catalogs/{cfg['FILENAME_MERGED_CAT']}")
+    df_balrog = open_all_balrog_dataset(f"{cfg['PATH_DATA']}/{cfg['FILENAME_MERGED_CAT']}")
     for log in lst_of_loggers:
         log.info("Rename col's: BDF_FLUX_DERED_CALIB_KS: BDF_FLUX_DERED_CALIB_ and "
                  "BDF_FLUX_ERR_DERED_CALIB_KS: BDF_FLUX_ERR_DERED_CALIB_K")
@@ -62,11 +63,7 @@ def create_balrog_subset(cfg):
         log.info(df_balrog.isna().sum())
         log.info(df_balrog.isna().sum().sum())
 
-    if cfg['ONLY_DETECT'] is True:
-        df_balrog = df_balrog[df_balrog["detected"] == 1]
-        print(f"length of only detected balrog objects {len(df_balrog)}")
-        for log in lst_of_loggers:
-            log.info(f"length of only detected balrog objects {len(df_balrog)}")
+    df_balrog_only_detected = df_balrog.copy()
 
     if cfg['APPLY_FILL_NA'] is True:
         print(f"start fill na default")
@@ -74,6 +71,7 @@ def create_balrog_subset(cfg):
             log.info(f"start fill na default")
         for col in cfg['FILL_NA'].keys():
             df_balrog[col].fillna(cfg['FILL_NA'][col], inplace=True)
+            df_balrog_only_detected[col].fillna(cfg['FILL_NA'][col], inplace=True)
             print(f"fill na default: col={col} val={cfg['FILL_NA'][col]}")
             for log in lst_of_loggers:
                 log.info(f"fill na default: col={col} val={cfg['FILL_NA'][col]}")
@@ -82,8 +80,15 @@ def create_balrog_subset(cfg):
         for log in lst_of_loggers:
             log.info("No fill na")
 
+    df_balrog_only_detected = df_balrog_only_detected[df_balrog_only_detected["detected"] == 1]
+    print(f"length of only detected balrog objects {len(df_balrog_only_detected)}")
+    for log in lst_of_loggers:
+        log.info(f"length of only detected balrog objects {len(df_balrog)}")
+
     print(df_balrog.isna().sum())
     print(df_balrog.isna().sum().sum())
+    print(df_balrog_only_detected.isna().sum())
+    print(df_balrog_only_detected.isna().sum().sum())
     for log in lst_of_loggers:
         log.info(df_balrog.isna().sum())
         log.info(df_balrog.isna().sum().sum())
@@ -129,6 +134,46 @@ def create_balrog_subset(cfg):
         save_name=f"unsheared/mag"
     )
 
+
+    ###### Only detected objects
+
+    df_balrog_only_detected = calc_color(
+        cfg=cfg,
+        data_frame=df_balrog_only_detected,
+        mag_type=("LUPT", "BDF"),
+        flux_col=("BDF_FLUX_DERED_CALIB", "BDF_FLUX_ERR_DERED_CALIB"),
+        mag_col=("BDF_LUPT_DERED_CALIB", "BDF_LUPT_ERR_DERED_CALIB"),
+        bins=cfg['BDF_BINS'],
+        save_name=f"bdf_lupt"
+    )
+    df_balrog_only_detected = calc_color(
+        cfg=cfg,
+        data_frame=df_balrog_only_detected,
+        mag_type=("LUPT", "unsheared"),
+        flux_col=("unsheared/flux", "unsheared/flux_err"),
+        mag_col=("unsheared/lupt", "unsheared/lupt_err"),
+        bins=cfg['UNSHEARED_BINS'],
+        save_name=f"unsheared/lupt"
+    )
+    df_balrog_only_detected = calc_color(
+        cfg=cfg,
+        data_frame=df_balrog_only_detected,
+        mag_type=("MAG", "BDF"),
+        flux_col=("BDF_FLUX_DERED_CALIB", "BDF_FLUX_ERR_DERED_CALIB"),
+        mag_col=("BDF_MAG_DERED_CALIB", "BDF_MAG_ERR_DERED_CALIB"),
+        bins=cfg['BDF_BINS'],
+        save_name=f"bdf_mag"
+    )
+    df_balrog_only_detected = calc_color(
+        cfg=cfg,
+        data_frame=df_balrog_only_detected,
+        mag_type=("MAG", "unsheared"),
+        flux_col=("unsheared/flux", "unsheared/flux_err"),
+        mag_col=("unsheared/mag", "unsheared/mag_err"),
+        bins=cfg['UNSHEARED_BINS'],
+        save_name=f"unsheared/mag"
+    )
+
     for log in lst_of_loggers:
         log.info(f"length of all balrog objects {len(df_balrog)}")
     print(f"length of all balrog objects {len(df_balrog)}")
@@ -138,54 +183,201 @@ def create_balrog_subset(cfg):
         for log in lst_of_loggers:
             log.info(f"Only detected objects")
         df_balrog = unsheared_object_cuts(data_frame=df_balrog)
+        df_balrog_only_detected = unsheared_object_cuts(data_frame=df_balrog_only_detected)
     if cfg['CUT_FLAG'] is True:
         print(f"Flag cuts")
         for log in lst_of_loggers:
             log.info(f"Flag cuts")
         df_balrog = flag_cuts(data_frame=df_balrog)
+        df_balrog_only_detected = flag_cuts(data_frame=df_balrog_only_detected)
     if cfg['CUT_MAG'] is True:
         print(f"mag cuts")
         for log in lst_of_loggers:
             log.info(f"mag cuts")
         df_balrog = unsheared_mag_cut(data_frame=df_balrog)
+        df_balrog_only_detected = unsheared_mag_cut(data_frame=df_balrog_only_detected)
     if cfg['CUT_SHEAR'] is True:
         print(f"shear cuts")
         for log in lst_of_loggers:
             log.info(f"shear cuts")
         df_balrog = unsheared_shear_cuts(data_frame=df_balrog)
+        df_balrog_only_detected = unsheared_shear_cuts(data_frame=df_balrog_only_detected)
     if cfg['CUT_AIRMASS'] is True:
         print(f"airmass cuts")
         for log in lst_of_loggers:
             log.info(f"airmass cuts")
         df_balrog = airmass_cut(data_frame=df_balrog)
+        df_balrog_only_detected = airmass_cut(data_frame=df_balrog_only_detected)
     if cfg['CUT_BINARY'] is True:
         print(f"binary cuts")
         for log in lst_of_loggers:
             log.info(f"binary cuts")
         df_balrog = binary_cut(data_frame=df_balrog)
+        df_balrog_only_detected = binary_cut(data_frame=df_balrog_only_detected)
     if cfg['CUT_MASK'] is True:
         print(f"mask cuts")
         for log in lst_of_loggers:
             log.info(f"mask cuts")
         df_balrog = mask_cut(data_frame=df_balrog, master=cfg['PATH_DATA']+cfg['FILENAME_MASTER_CAT'])
+        df_balrog_only_detected = mask_cut(data_frame=df_balrog_only_detected, master=cfg['PATH_DATA']+cfg['FILENAME_MASTER_CAT'])
     print(f"length of catalog after cut section {len(df_balrog)}")
+    print(f"length of only detected catalog after cut section {len(df_balrog_only_detected)}")
     for log in lst_of_loggers:
         log.info(f"length of catalog after cut section {len(df_balrog)}")
+        log.info(f"length of only detected catalog after cut section {len(df_balrog_only_detected)}")
+
+    def get_yj_transformer(data_frame):
+        """"""
+        dict_pt = {}
+        for col in cfg['YJ_TRANSFORM_COLS']:
+            pt = PowerTransformer(method="yeo-johnson")
+            pt.fit(np.array(data_frame[col]).reshape(-1, 1))
+            data_frame[col] = pt.transform(np.array(data_frame[col]).reshape(-1, 1))
+            dict_pt[f"{col} pt"] = pt
+        return data_frame, dict_pt
+
+    df_balrog_yj = df_balrog.copy()
+    df_balrog_only_detected_yj = df_balrog_only_detected.copy()
+
+    df_balrog_yj, dict_balrog_yj_transformer = get_yj_transformer(
+        data_frame=df_balrog_yj
+    )
+    df_balrog_only_detected_yj, dict_balrog_only_detected_yj_transformer = get_yj_transformer(
+        data_frame=df_balrog_only_detected_yj
+    )
+
+    joblib.dump(
+        dict_balrog_yj_transformer,
+        f"{cfg['PATH_OUTPUT']}/Catalogs/{cfg['FILENAME_YJ_TRANSFORMER']}.joblib"
+    )
+    joblib.dump(
+        dict_balrog_only_detected_yj_transformer,
+        f"{cfg['PATH_OUTPUT']}/Catalogs/{cfg['FILENAME_YJ_TRANSFORMER_ONLY_DETECTED']}.joblib"
+    )
+
+    def get_scaler(data_frame):
+        """"""
+        if cfg[f"SCALER"] == "MinMaxScaler":
+            scaler = MinMaxScaler()
+        elif cfg[f"SCALER"] == "MaxAbsScaler":
+            scaler = MaxAbsScaler()
+        elif cfg[f"SCALER"] == "StandardScaler":
+            scaler = StandardScaler()
+        else:
+            raise TypeError(f'{cfg[f"SCALER"]} is no valid scaler')
+        if scaler is not None:
+            scaler.fit(data_frame)
+        return scaler
+
+    dict_data_frames = {
+        "scaler_balrog_flux_yj": (
+            df_balrog_yj[cfg['SCALER_COLS_FLUX']],
+            f"{cfg['PATH_OUTPUT']}/Catalogs/{cfg['SCALER'].lower()}_flux_yj.joblib"
+        ),
+        "scaler_balrog_only_detected_flux_yj": (
+            df_balrog_only_detected_yj[cfg['SCALER_COLS_FLUX']],
+            f"{cfg['PATH_OUTPUT']}/Catalogs/{cfg['SCALER'].lower()}_odet_flux_yj.joblib"
+        ),
+        "scaler_balrog_mag_yj": (
+            df_balrog_yj[cfg['SCALER_COLS_MAG']],
+            f"{cfg['PATH_OUTPUT']}/Catalogs/{cfg['SCALER'].lower()}_mag_yj.joblib"
+        ),
+        "scaler_balrog_only_detected_mag_yj": (
+            df_balrog_only_detected_yj[cfg['SCALER_COLS_MAG']],
+            f"{cfg['PATH_OUTPUT']}/Catalogs/{cfg['SCALER'].lower()}_odet_mag_yj.joblib"
+        ),
+        "scaler_balrog_lupt_yj": (
+            df_balrog_yj[cfg['SCALER_COLS_LUPT']],
+            f"{cfg['PATH_OUTPUT']}/Catalogs/{cfg['SCALER'].lower()}_lupt_yj.joblib"
+        ),
+        "scaler_balrog_only_detected_lup_yjt": (
+            df_balrog_only_detected_yj[cfg['SCALER_COLS_LUPT']],
+            f"{cfg['PATH_OUTPUT']}/Catalogs/{cfg['SCALER'].lower()}_odet_lupt_yj.joblib"
+        ),
+    }
+
+    for key in dict_data_frames.keys():
+        scaler = get_scaler(
+            data_frame=dict_data_frames[key][0]  # df_balrog[cfg['SCALER_COLS_FLUX']]
+        )
+        joblib.dump(
+            scaler,
+            dict_data_frames[key][1]
+        )
+
+    del df_balrog_yj
+    del df_balrog_only_detected_yj
+
+    dict_data_frames = {
+        "scaler_balrog_flux": (
+            df_balrog[cfg['SCALER_COLS_FLUX']],
+            f"{cfg['PATH_OUTPUT']}/Catalogs/{cfg['SCALER'].lower()}_flux.joblib"
+        ),
+        "scaler_balrog_only_detected_flux": (
+            df_balrog_only_detected[cfg['SCALER_COLS_FLUX']],
+            f"{cfg['PATH_OUTPUT']}/Catalogs/{cfg['SCALER'].lower()}_odet_flux.joblib"
+        ),
+        "scaler_balrog_mag": (
+            df_balrog[cfg['SCALER_COLS_MAG']],
+            f"{cfg['PATH_OUTPUT']}/Catalogs/{cfg['SCALER'].lower()}_mag.joblib"
+        ),
+        "scaler_balrog_only_detected_mag": (
+            df_balrog_only_detected[cfg['SCALER_COLS_MAG']],
+            f"{cfg['PATH_OUTPUT']}/Catalogs/{cfg['SCALER'].lower()}_odet_mag.joblib"
+        ),
+        "scaler_balrog_lupt": (
+            df_balrog[cfg['SCALER_COLS_LUPT']],
+            f"{cfg['PATH_OUTPUT']}/Catalogs/{cfg['SCALER'].lower()}_lupt.joblib"
+        ),
+        "scaler_balrog_only_detected_lupt": (
+            df_balrog_only_detected[cfg['SCALER_COLS_LUPT']],
+            f"{cfg['PATH_OUTPUT']}/Catalogs/{cfg['SCALER'].lower()}_odet_lupt.joblib"
+        ),
+    }
+    for key in dict_data_frames.keys():
+        scaler = get_scaler(
+            data_frame=dict_data_frames[key][0]  # df_balrog[cfg['SCALER_COLS_FLUX']]
+        )
+        joblib.dump(
+            scaler,
+            dict_data_frames[key][1]
+        )
 
     number_of_samples = cfg['NSAMPLES']
+    number_of_samples_only_detected = cfg['NSAMPLES_ONLY_DETECTED']
     if number_of_samples is None:
         number_of_samples = len(df_balrog)
+    if number_of_samples_only_detected is None:
+        number_of_samples_only_detected = len(df_balrog_only_detected)
     for log in lst_of_loggers:
         log.info(f"Number of samples {number_of_samples}")
-    df_balrog_subset = df_balrog.sample(number_of_samples, ignore_index=True, replace=False)
-
-    for k in df_balrog_subset.keys():
-        print(k)
+        log.info(f"Number of samples only detected {number_of_samples_only_detected}")
+    df_balrog_subset = df_balrog.sample(
+        number_of_samples,
+        ignore_index=True,
+        replace=False
+    )
+    df_balrog_only_detected_subset = df_balrog_only_detected.sample(
+        number_of_samples_only_detected,
+        ignore_index=True,
+        replace=False
+    )
 
     save_balrog_subset(
+        cfg=cfg,
         data_frame=df_balrog_subset,
-        path_balrog_subset=f"{cfg['PATH_OUTPUT']}/Catalogs/{cfg['FILENAME_GANDALF_TRAIN_CAT']}_{number_of_samples}.pkl",
-        protocol=cfg['PROTOCOL'],
+        save_name_train=cfg['FILENAME_GANDALF_TRAIN_CAT'],
+        save_name_valid=cfg['FILENAME_GANDALF_VALIDATION_CAT'],
+        save_name_test=cfg['FILENAME_GANDALF_TEST_CAT'],
+        lst_of_loggers=lst_of_loggers
+    )
+
+    save_balrog_subset(
+        cfg=cfg,
+        data_frame=df_balrog_only_detected_subset,
+        save_name_train=cfg['FILENAME_GANDALF_TRAIN_CAT_ONLY_DETECTED'],
+        save_name_valid=cfg['FILENAME_GANDALF_VALIDATION_CAT_ONLY_DETECTED'],
+        save_name_test=cfg['FILENAME_GANDALF_TEST_CAT_ONLY_DETECTED'],
         lst_of_loggers=lst_of_loggers
     )
 

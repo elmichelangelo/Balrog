@@ -1,6 +1,7 @@
 import pickle
 import numpy as np
 from sklearn.preprocessing import PowerTransformer
+from sklearn.model_selection import train_test_split
 import pandas as pd
 from Handler.plot_functions import *
 """import warnings
@@ -393,15 +394,30 @@ def open_all_balrog_dataset(path_all_balrog_data):
     return df_balrog
 
 
-def save_balrog_subset(data_frame, path_balrog_subset, protocol, lst_of_loggers):
+def save_balrog_subset(cfg, data_frame, save_name_train, save_name_valid, save_name_test, lst_of_loggers):
     """"""
+
+    assert cfg['SIZE_TRAINING_SET'] + cfg['SIZE_VALIDATION_SET'] + cfg['SIZE_TEST_SET'] == 1
+    valid_test_ratio = cfg['SIZE_VALIDATION_SET'] / (cfg['SIZE_VALIDATION_SET'] + cfg['SIZE_TEST_SET'])
+
+    df_train, df_temp = train_test_split(data_frame, train_size=cfg['SIZE_TRAINING_SET'])
+    df_valid, df_test = train_test_split(df_temp, train_size=valid_test_ratio)
+
     for log in lst_of_loggers:
-        log.info(f"Save data as {path_balrog_subset} with protocol {protocol}")
-    if protocol == 2:
-        with open(path_balrog_subset, "wb") as f:
-            pickle.dump(data_frame.to_dict(), f, protocol=2)
+        log.info(f"Save train data as {cfg['PATH_OUTPUT']}/Catalogs/{save_name_train} with protocol {cfg['PROTOCOL']}")
+        log.info(f"Save valid data as {cfg['PATH_OUTPUT']}/Catalogs/{save_name_valid} with protocol {cfg['PROTOCOL']}")
+        log.info(f"Save test data as {cfg['PATH_OUTPUT']}/Catalogs/{save_name_test} with protocol {cfg['PROTOCOL']}")
+    if cfg['PROTOCOL'] == 2:
+        with open(f"{cfg['PATH_OUTPUT']}/Catalogs/{save_name_train}_{len(df_train)}.pkl", "wb") as f:
+            pickle.dump(df_train.to_dict(), f, protocol=2)
+        with open(f"{cfg['PATH_OUTPUT']}/Catalogs/{save_name_valid}_{len(df_valid)}.pkl", "wb") as f:
+            pickle.dump(df_valid.to_dict(), f, protocol=2)
+        with open(f"{cfg['PATH_OUTPUT']}/Catalogs/{save_name_test}_{len(df_test)}.pkl", "wb") as f:
+            pickle.dump(df_test.to_dict(), f, protocol=2)
     else:
-        data_frame.to_pickle(path_balrog_subset)
+        df_train.to_pickle(f"{cfg['PATH_OUTPUT']}/Catalogs/{save_name_train}_{len(df_train)}.pkl")
+        df_valid.to_pickle(f"{cfg['PATH_OUTPUT']}/Catalogs/{save_name_valid}_{len(df_valid)}.pkl")
+        df_test.to_pickle(f"{cfg['PATH_OUTPUT']}/Catalogs/{save_name_test}_{len(df_test)}.pkl")
 
 
 def assign_loggrid( x, y, xmin, xmax, xsteps, ymin, ymax, ysteps):

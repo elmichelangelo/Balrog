@@ -10,7 +10,7 @@ from Handler.helper_classes import MidpointNormalize
 import corner
 
 
-def plot_corner(data_frame, columns, labels, ranges=None, show_plot=False, save_plot=False, save_name=None):
+def plot_corner(data_frame, columns, labels, title, ranges=None, show_plot=False, save_plot=False, save_name=None):
     """"""
     data = data_frame[columns].values
     ndim = data.shape[1]
@@ -20,134 +20,136 @@ def plot_corner(data_frame, columns, labels, ranges=None, show_plot=False, save_
     corner.corner(
         data,
         fig=fig,
-        bins=20,
+        bins=100,
         range=ranges,
-        color='#2a8dd4',
-        smooth=True,
-        smooth1d=True,
-        # labels=labels,
+        color='#ff8c00',
+        smooth=.8,
+        smooth1d=.8,
+        labels=labels,
         show_titles=True,
         title_fmt=".2f",
         title_kwargs={"fontsize": 12},
-        scale_hist=False,
+        hist_kwargs={'alpha': 1},
+        scale_hist=True,
         quantiles=[0.16, 0.5, 0.84],
+        levels=[0.393, 0.865, 0.989],  # , 0.989
         density=True,
         plot_datapoints=True,
-        plot_density=False,
+        plot_density=True,
+        plot_contours=True,
+        fill_contours=True
+    )
+    from matplotlib.lines import Line2D
+    legend_elements = [
+        Line2D([0], [0], color='#ff8c00', lw=4, label='gaNdalF'),
+    ]
+
+    fig.suptitle(f'{title}', fontsize=16)
+
+    fig.legend(handles=legend_elements, loc='upper right', fontsize=12)
+
+    if show_plot is True:
+        plt.show()
+    if save_plot is True:
+        plt.savefig(save_name, dpi=200)
+    plt.clf()
+    plt.close(fig)
+
+
+def plot_compare_corner(data_frame_generated, data_frame_true, columns, labels, title, ranges=None, show_plot=False,
+                        save_plot=False, save_name=None):
+
+    arr_generated = data_frame_generated[columns].values
+    arr_true = data_frame_true[columns].values
+
+    # Quantile für gandalf berechnen
+    quantiles_gandalf = np.quantile(arr_generated, q=[0.16, 0.84], axis=0)
+
+    # Quantile für balrog berechnen
+    quantiles_balrog = np.quantile(arr_true, q=[0.16, 0.84], axis=0)
+
+    delta_names = ["mean", "median", "q16", "q84"]
+
+    ndim = arr_generated.shape[1]
+
+    fig, axes = plt.subplots(ndim, ndim, figsize=(16, 12))
+
+    # Plot gandalf
+    corner.corner(
+        arr_generated,
+        fig=fig,
+        bins=100,
+        range=ranges,
+        color='#ff8c00',
+        smooth=.8,
+        smooth1d=.8,
+        labels=labels,
+        show_titles=True,
+        title_fmt=".2f",
+        title_kwargs={"fontsize": 12},
+        hist_kwargs={'alpha': 1},
+        scale_hist=False,
+        quantiles=[0.16, 0.5, 0.84],
+        levels=[0.393, 0.865, 0.989],
+        density=True,
+        plot_datapoints=True,
+        plot_density=True,
         plot_contours=True,
         fill_contours=True
     )
 
-    for i in range(ndim):
-        # for j in range(ndim):
-        ax = axes[i, 0]
-        ax.xaxis.label.set_rotation(45)
-        ax.yaxis.label.set_rotation(45)
-        # ax.xaxis.labelpad = 10
-        # ax.yaxis.labelpad = 10
-        ax.xaxis.label.set_text(labels[0])  # Hier setzen Sie die Beschriftung manuell
-        ax.yaxis.label.set_text(labels[i])  # Hier setzen Sie die Beschriftung manuell
+    # Plot balrog
+    corner.corner(
+        arr_true,
+        fig=fig,
+        bins=100,
+        range=ranges,
+        color='#51a6fb',
+        smooth=.8,
+        smooth1d=.8,
+        labels=labels,
+        show_titles=True,
+        title_fmt=".2f",
+        title_kwargs={"fontsize": 12},
+        hist_kwargs={'alpha': 1},
+        scale_hist=False,
+        quantiles=[0.16, 0.5, 0.84],
+        levels=[0.393, 0.865, 0.989],
+        density=True,
+        plot_datapoints=True,
+        plot_density=True,
+        plot_contours=True,
+        fill_contours=True
+    )
 
-    # Adjust labels and titles
-    for i in range(ndim):
-        ax = axes[i, i]
-
-        ax.xaxis.label.set_rotation(90)
-        ax.yaxis.label.set_rotation(90)
-
-        # Positionieren Sie die Achsen-Labels
-        ax.xaxis.labelpad = 10  # Optional: Passen Sie den Abstand nach Bedarf an
-        ax.yaxis.labelpad = 10  # Optional: Passen Sie den Abstand nach Bedarf an
-
-        ax.set_xticklabels(ax.get_xticks(), rotation=45)
-        ax.set_yticklabels(ax.get_yticks(), rotation=45)
-
-        title = f"{labels[i]} = {np.median(data[:, i]):.2f}"
-        ax.set_title(title, fontsize=12, rotation=45, y=1.04)
-
-    # Manually adding a legend using Line2D
     from matplotlib.lines import Line2D
-    legend_elements = [Line2D([0], [0], color='#2a8dd4', lw=4, label='Dataset 1')]
-    fig.legend(handles=legend_elements, loc='upper right', fontsize='x-large')
-
-    fig.suptitle('Corner Plot', fontsize=16)
-
-    if show_plot is True:
-        plt.show()
-    if save_plot is True:
-        plt.savefig(save_name, dpi=200)
-
-
-def plot_compare_corner(data_frame_1, data_frame_2, columns, labels, ranges=None, show_plot=False, save_plot=False,
-                        save_name=None):
-    data_1 = data_frame_1[columns].values
-    data_2 = data_frame_2[columns].values
-
-    ndim = data_1.shape[1]
-
-    fig, axes = plt.subplots(ndim, ndim, figsize=(16, 9))
-
-    # Plot data_1
-    corner.corner(
-        data_1,
-        fig=fig,
-        bins=20,
-        range=ranges,
-        color='#2a8dd4',
-        smooth=True,
-        smooth1d=True,
-        labels=labels,
-        show_titles=True,
-        title_fmt=".2f",
-        title_kwargs={"fontsize": 12},
-        scale_hist=False,
-        quantiles=[0.16, 0.5, 0.84],
-        density=True,
-        plot_datapoints=True,
-        plot_density=False,
-        plot_contours=True,
-        fill_contours=True,
-        label="Dataset 1"
-    )
-
-    # Plot data_2
-    corner.corner(
-        data_2,
-        fig=fig,
-        bins=20,
-        range=ranges,
-        color='#a3e87e',
-        smooth=True,
-        smooth1d=True,
-        labels=labels,
-        show_titles=True,
-        title_fmt=".2f",
-        title_kwargs={"fontsize": 12},
-        scale_hist=False,
-        quantiles=[0.16, 0.5, 0.84],
-        density=True,
-        plot_datapoints=True,
-        plot_density=False,
-        plot_contours=True,
-        fill_contours=True,
-        label="Dataset 2"
-    )
+    legend_elements = [
+        Line2D([0], [0], color='#ff8c00', lw=4, label='gaNdalF'),
+        Line2D([0], [0], color='#51a6fb', lw=4, label='Balrog')
+    ]
 
     for i in range(ndim):
-        ax = axes[i, i]
-        ax.set_xticklabels(ax.get_xticks(), rotation=45)
-        ax.set_yticklabels(ax.get_yticks(), rotation=45)
-
         # Titel mit Quantilen manuell hinzufügen
-        ax.set_title(f"{labels[i]} = {np.median(data_1[:, i]):.2f}, {np.median(data_2[:, i]):.2f}", fontsize=12)
+        delta_mean = np.mean(arr_generated[:, i]) - np.mean(arr_true[:, i])
+        delta_median = np.median(arr_generated[:, i]) - np.median(arr_true[:, i])
+        delta_q16 = quantiles_gandalf[0, i] - quantiles_balrog[0, i]
+        delta_q84 = quantiles_gandalf[1, i] - quantiles_balrog[1, i]
 
-    fig.legend(loc="upper right")
-    fig.suptitle('Compare corner plot', fontsize=16)
+        legend_elements.append(Line2D([0], [0], color='#ff8c00', lw=0, label=f'{labels[i]}: mean={delta_mean:.5f}'), )
+        legend_elements.append(Line2D([0], [0], color='#ff8c00', lw=0, label=f'{labels[i]}: median={delta_median:.5f}'), )
+        legend_elements.append(Line2D([0], [0], color='#ff8c00', lw=0, label=f'{labels[i]}: q16={delta_q16:.5f}'), )
+        legend_elements.append(Line2D([0], [0], color='#ff8c00', lw=0, label=f'{labels[i]}: q84={delta_q84:.5f}'), )
+
+    fig.suptitle(f'{title}', fontsize=16)
+
+    fig.legend(handles=legend_elements, loc='upper right', fontsize=12)
 
     if show_plot is True:
         plt.show()
     if save_plot is True:
-        plt.savefig(save_name, dpi=200)
+        plt.savefig(save_name, dpi=300)
+    plt.clf()
+    plt.close(fig)
 
 
 def plot_histo(data_frame, cols):
