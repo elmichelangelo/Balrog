@@ -394,7 +394,7 @@ def open_all_balrog_dataset(path_all_balrog_data):
     return df_balrog
 
 
-def save_balrog_subset(cfg, data_frame, save_name_train, save_name_valid, save_name_test, lst_of_loggers):
+def save_balrog_subset(cfg, data_frame, save_name_train, save_name_valid, save_name_test, lst_of_loggers, mock_prefix):
     """"""
 
     assert cfg['SIZE_TRAINING_SET'] + cfg['SIZE_VALIDATION_SET'] + cfg['SIZE_TEST_SET'] == 1
@@ -404,20 +404,20 @@ def save_balrog_subset(cfg, data_frame, save_name_train, save_name_valid, save_n
     df_valid, df_test = train_test_split(df_temp, train_size=valid_test_ratio)
 
     for log in lst_of_loggers:
-        log.info(f"Save train data as {cfg['PATH_OUTPUT']}/Catalogs/{save_name_train} with protocol {cfg['PROTOCOL']}")
-        log.info(f"Save valid data as {cfg['PATH_OUTPUT']}/Catalogs/{save_name_valid} with protocol {cfg['PROTOCOL']}")
-        log.info(f"Save test data as {cfg['PATH_OUTPUT']}/Catalogs/{save_name_test} with protocol {cfg['PROTOCOL']}")
+        log.info(f"Save train data as {cfg['PATH_OUTPUT']}/Catalogs/{save_name_train}{mock_prefix} with protocol {cfg['PROTOCOL']}")
+        log.info(f"Save valid data as {cfg['PATH_OUTPUT']}/Catalogs/{save_name_valid}{mock_prefix} with protocol {cfg['PROTOCOL']}")
+        log.info(f"Save test data as {cfg['PATH_OUTPUT']}/Catalogs/{save_name_test}{mock_prefix} with protocol {cfg['PROTOCOL']}")
     if cfg['PROTOCOL'] == 2:
-        with open(f"{cfg['PATH_OUTPUT']}/Catalogs/{save_name_train}_{len(df_train)}.pkl", "wb") as f:
+        with open(f"{cfg['PATH_OUTPUT']}/Catalogs/{save_name_train}_{len(df_train)}{mock_prefix}.pkl", "wb") as f:
             pickle.dump(df_train.to_dict(), f, protocol=2)
-        with open(f"{cfg['PATH_OUTPUT']}/Catalogs/{save_name_valid}_{len(df_valid)}.pkl", "wb") as f:
+        with open(f"{cfg['PATH_OUTPUT']}/Catalogs/{save_name_valid}_{len(df_valid)}{mock_prefix}.pkl", "wb") as f:
             pickle.dump(df_valid.to_dict(), f, protocol=2)
-        with open(f"{cfg['PATH_OUTPUT']}/Catalogs/{save_name_test}_{len(df_test)}.pkl", "wb") as f:
+        with open(f"{cfg['PATH_OUTPUT']}/Catalogs/{save_name_test}_{len(df_test)}{mock_prefix}.pkl", "wb") as f:
             pickle.dump(df_test.to_dict(), f, protocol=2)
     else:
-        df_train.to_pickle(f"{cfg['PATH_OUTPUT']}/Catalogs/{save_name_train}_{len(df_train)}.pkl")
-        df_valid.to_pickle(f"{cfg['PATH_OUTPUT']}/Catalogs/{save_name_valid}_{len(df_valid)}.pkl")
-        df_test.to_pickle(f"{cfg['PATH_OUTPUT']}/Catalogs/{save_name_test}_{len(df_test)}.pkl")
+        df_train.to_pickle(f"{cfg['PATH_OUTPUT']}/Catalogs/{save_name_train}_{len(df_train)}{mock_prefix}.pkl")
+        df_valid.to_pickle(f"{cfg['PATH_OUTPUT']}/Catalogs/{save_name_valid}_{len(df_valid)}{mock_prefix}.pkl")
+        df_test.to_pickle(f"{cfg['PATH_OUTPUT']}/Catalogs/{save_name_test}_{len(df_test)}{mock_prefix}.pkl")
 
 
 def assign_loggrid( x, y, xmin, xmax, xsteps, ymin, ymax, ysteps):
