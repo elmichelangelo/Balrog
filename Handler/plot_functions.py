@@ -152,12 +152,74 @@ def plot_compare_corner(data_frame_generated, data_frame_true, columns, labels, 
     plt.close(fig)
 
 
-def plot_histo(data_frame, cols):
-    for col in cols:
-        sns.histplot(data_frame[col], stat="density", bins=50, kde=True)
-        plt.title(f"mean {data_frame[col].mean():.4f}, std {data_frame[col].std():.4f}")
-        plt.xlabel(col)
+def plot_histo(data_frame, columns, colors=None, bin_size=40, show_plot=False, save_plot=False, save_name=None,
+               title=None, log_scale=(False, False), xlabel=""):
+    if colors is None:
+        colors = ['#fc810a', '#1b78bc', '#9463be']
+
+    for idx, column in enumerate(columns):
+        sns.histplot(
+            x=data_frame[column].values,
+            element="step",
+            fill=False,
+            color=colors[idx],
+            bins=bin_size,
+            log_scale=log_scale,
+            stat="probability",
+            label=f"mock {column}"
+        )
+
+    # Set some plot parameters
+    plt.title(title)
+    plt.xlabel(xlabel)
+    plt.legend()
+    if save_plot is True:
+        plt.savefig(save_name, dpi=300)
+    if show_plot is True:
         plt.show()
+    plt.clf()
+
+
+def plot_histo_compare(data_frame_generated, data_frame_true, columns, colors=None, bin_size=40, show_plot=False, save_plot=False,
+                       save_name=None, title=None, log_scale=(False, False), xlabel=""):
+    """"""
+
+    if colors is None:
+        colors = [['#ff8c00', '#51a6fb']]
+
+    for idx, column in enumerate(columns):
+        sns.histplot(
+            x=data_frame_generated[column].values,
+            element="step",
+            fill=False,
+            color=colors[idx][0],
+            bins=bin_size,
+            log_scale=log_scale,
+            stat="probability",
+            label=f"mock {column}"
+        )
+
+        if "outside" not in column and "inside" not in column and "BDF_MAG_DERED_CALIB" not in column and "after" not in column:
+            sns.histplot(
+                x=data_frame_true[column].values,
+                element="step",
+                fill=False,
+                color=colors[idx][1],
+                bins=bin_size,
+                log_scale=log_scale,
+                stat="probability",
+                label=f"true {column}"
+            )
+
+    # Set some plot parameters
+    plt.title(title)
+    plt.xlabel(xlabel)
+    plt.legend()
+    if save_plot is True:
+        plt.savefig(save_name, dpi=300)
+    if show_plot is True:
+        plt.show()
+    plt.clf()
 
 
 def plot_chain(data_frame, plot_name, max_ticks=5, shade_alpha=0.8, tick_font_size=12, label_font_size=12, columns=None,
@@ -319,7 +381,7 @@ def loss_plot(
     if show_plot is True:
         statistical_figure.show()
     if save_plot is True:
-        statistical_figure.savefig(f"{save_name}", dpi=200)
+        statistical_figure.savefig(f"{save_name}", dpi=300)
 
     # Clear and close open figure to avoid memory overload
     statistical_figure.clf()
@@ -683,3 +745,119 @@ def plot_balrog_spencer(data_frame):
     cbar = plt.colorbar()
     cbar.set_label('log10(|Meas-True T|)', rotation=270, labelpad=25)
     plt.show()
+
+
+def plot_bin_offset(data_frame, true_column, measured_column, true_magnitude_percent_deviation=23.25,
+                    color="#da7b29", bin_size=0.25, show_plot=False, save_plot=False, save_name="my_plot.png"):
+    """"""
+    data_frame_copy = data_frame.copy()
+    data_frame_copy = data_frame_copy[
+        (18 <= data_frame_copy[true_column]) & (data_frame_copy[true_column] < 24.5)]
+    true = data_frame_copy[true_column].values
+    unsheared_mag_i = data_frame_copy[measured_column].values
+    difference = unsheared_mag_i - true
+
+    min_true = np.min(true)
+    max_true = np.max(true)
+    bins = np.arange(min_true, max_true + bin_size, bin_size)
+
+    bin_stats = {'bin_edges': [], 'std': [], 'mean': [], 'median': [], 'count': []}
+    for i in range(len(bins) - 1):
+        bin_mask = (true >= bins[i]) & (true < bins[i + 1])
+        bin_values = difference[bin_mask]
+        bin_stats['bin_edges'].append((bins[i], bins[i + 1]))
+        bin_stats['count'].append(np.sum(bin_mask))
+        if bin_values.size > 0:
+            bin_stats['std'].append(np.std(bin_values))
+            bin_stats['mean'].append(np.mean(bin_values))
+            bin_stats['median'].append(np.median(bin_values))
+        else:
+            bin_stats['std'].append(np.nan)
+            bin_stats['mean'].append(np.nan)
+            bin_stats['median'].append(np.nan)
+
+    weights = np.array(bin_stats['count'])
+    mean_values = np.array(bin_stats['mean'])
+    median_values = np.array(bin_stats['median'])
+
+    valid_mean_weights = weights[~np.isnan(mean_values)]
+    valid_means = mean_values[~np.isnan(mean_values)]
+    valid_median_weights = weights[~np.isnan(median_values)]
+    valid_median = median_values[~np.isnan(median_values)]
+
+    weighted_mean = np.average(valid_means, weights=valid_mean_weights)
+    weighted_median = np.average(valid_median, weights=valid_median_weights)
+
+    percent_deviation_mean = (weighted_mean / true_magnitude_percent_deviation) * 100
+    percent_deviation_median = (weighted_median / true_magnitude_percent_deviation) * 100
+
+    df_data = pd.DataFrame({
+        "true": true,
+        "difference": difference
+    })
+
+    # import arviz as az
+    # inference_data = az.from_pandas(df_data)
+
+    fig = corner.corner(
+        df_data,
+        bins=100,
+        range=[(17, 25), (-1, 1)],
+        color=color,
+        smooth=.8,
+        smooth1d=.8,
+        labels=[true_column, f"{measured_column} - {true_column}"],
+        show_titles=True,
+        title_fmt=".2f",
+        title_kwargs={"fontsize": 12},
+        hist_kwargs={'alpha': 1},
+        scale_hist=True,
+        quantiles=[0.16, 0.5, 0.84],
+        levels=[0.393, 0.865, 0.989],
+        density=True,
+        plot_datapoints=True,
+        plot_density=True,
+        plot_contours=True,
+        fill_contours=True
+    )
+    fig.set_size_inches(18, 10)
+
+    fig.suptitle(
+        f'Weighted Mean: {weighted_mean*1000:.4f} mmag, '
+        f'Weighted Median: {weighted_median*1000:.4f} mmag, '
+        f'Percent Deviation Mean on {true_magnitude_percent_deviation} mag: {percent_deviation_mean:.2f}%, '
+        f'Percent Deviation Median on {true_magnitude_percent_deviation} mag: {percent_deviation_median:.2f}%, '
+        , fontsize=12)
+
+    ax = fig.axes[2]
+
+    bin_centers = 0.5 * (bins[:-1] + bins[1:])
+    for i in range(len(bin_centers)):
+        std = bin_stats['std'][i]
+        mean = bin_stats['mean'][i]
+        median = bin_stats['median'][i]
+        ax.vlines(x=bins[i], ymin=mean - std, ymax=mean + std, color='k', linestyle='-', linewidth=1)
+        ax.vlines(x=bins[i + 1], ymin=mean - std, ymax=mean + std, color='k', linestyle='-', linewidth=1)
+        ax.hlines(y=mean + std, xmin=bins[i], xmax=bins[i + 1], color='k', linewidth=1)
+        ax.hlines(y=mean - std, xmin=bins[i], xmax=bins[i + 1], color='k', linewidth=1)
+        ax.hlines(y=mean, xmin=bins[i], xmax=bins[i + 1], color='g', linewidth=1)
+        ax.hlines(y=median, xmin=bins[i], xmax=bins[i + 1], color='b', linewidth=1)
+    ax.axhline(y=0, color='k', linestyle='--', linewidth=1)
+    ax.grid()
+
+    bin_stats['weighted_mean'] = weighted_mean
+    bin_stats['weighted_median'] = weighted_median
+    bin_stats['percent_deviation_mean'] = percent_deviation_mean
+    bin_stats['percent_deviation_median'] = percent_deviation_median
+
+    if show_plot is True:
+        print("show plot")
+        plt.show()
+
+    if save_plot is True:
+        plt.savefig(save_name, dpi=300)
+
+    plt.clf()
+    plt.close()
+
+    return bin_stats
