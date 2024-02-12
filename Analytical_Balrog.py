@@ -387,8 +387,6 @@ def generate_mock(cfg, dict_offset, cov_diff, df_true):
     plt.legend()
     plt.show()
 
-    exit()
-
     if cfg["PLOT_MOCK_OFFSET"] is True:
         plot_bin_offset(
             data_frame=df_mock,
