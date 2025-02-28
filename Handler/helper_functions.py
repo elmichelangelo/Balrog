@@ -264,35 +264,6 @@ def calc_color(cfg, data_frame, mag_type, flux_col, mag_col, bins, save_name):
             lst_mag_cols.append(f"{mag}_{next_b}")
             lst_mag_parameter.append(f"{mag_type[0]} {next_b}")
             break
-    if cfg['PLT_COLOR'] is True:
-        plot_corner(
-            data_frame=data_frame,
-            columns=lst_color_cols,
-            labels=lst_color_parameter,
-            save_name=f"{cfg['PATH_OUTPUT']}/Plots/color_{save_name}.png",
-            save_plot=cfg['SAVE_PLOT'],
-            show_plot=cfg['SHOW_PLOT']
-        )
-        plot_corner(
-            data_frame=data_frame,
-            columns=lst_mag_cols,
-            labels=lst_mag_parameter,
-            save_name=f"{cfg['PATH_OUTPUT']}/Plots/mag_{save_name}.png",
-            save_plot=cfg['SAVE_PLOT'],
-            show_plot=cfg['SHOW_PLOT']
-        )
-        # plot_chain(
-        #     data_frame=data_frame,
-        #     columns=lst_color_cols,
-        #     parameter=lst_color_parameter,
-        #     save_name=f"color_{save_name}"
-        # )
-        # plot_chain(
-        #     data_frame=data_frame,
-        #     columns=lst_mag_cols,
-        #     parameter=lst_mag_parameter,
-        #     save_name=f"mag_{save_name}"
-        # )
     return data_frame
 
 
