@@ -131,7 +131,7 @@ def luptize_fluxes(data_frame, flux_col, lupt_col, bins):
         lst_var.append(data_frame[f"{flux_col[1]}_{bin}"])
     arr_flux = np.array(lst_flux).T
     arr_var = np.array(lst_var).T
-    lupt_mag, lupt_var = luptize_deep(flux=arr_flux, bins=bins, var=arr_var)
+    lupt_mag, lupt_var = luptize_deep(flux=arr_flux, bins=bins, var=arr_var, zp=30)
     lupt_mag = lupt_mag.T
     lupt_var = lupt_var.T
     for idx_bin, bin in enumerate(bins):
@@ -215,12 +215,19 @@ def luptize_inverse_fluxes(data_frame, flux_col, lupt_col, bins):
     return data_frame
 
 
-def calc_mag(data_frame, flux_col, mag_col, bins):
+def calc_mag(cfg, data_frame, flux_col, mag_col, bins):
     """"""
     for b in bins:
         if isinstance(mag_col, tuple):
-            data_frame[f"{mag_col[0]}_{b}"] = flux2mag(data_frame[f"{flux_col[0]}_{b}"])
-            data_frame[f"{mag_col[1]}_{b}"] = flux2mag(data_frame[f"{flux_col[1]}_{b}"])
+            data_frame[f"{mag_col[0]}_{b}"] = flux2mag(
+                flux=data_frame[f"{flux_col[0]}_{b}"],
+                zero_pt=cfg["ZERO_POINT"],
+                clip=cfg["CLIP"]
+            )
+            data_frame[f"{mag_col[1]}_{b}"] = fluxerr2magerr(
+                flux=data_frame[f"{flux_col[0]}_{b}"],
+                flux_err=data_frame[f"{flux_col[1]}_{b}"]
+            )
         else:
             data_frame[f"{mag_col}_{b}"] = flux2mag(data_frame[f"{flux_col}_{b}"])
     return data_frame
@@ -237,6 +244,7 @@ def calc_color(cfg, data_frame, mag_type, flux_col, mag_col, bins, save_name):
     if mag not in data_frame.keys():
         if mag_type[0] == "MAG":
             data_frame = calc_mag(
+                cfg=cfg,
                 data_frame=data_frame,
                 flux_col=flux_col,
                 mag_col=mag_col,
@@ -264,6 +272,20 @@ def calc_color(cfg, data_frame, mag_type, flux_col, mag_col, bins, save_name):
             lst_mag_cols.append(f"{mag}_{next_b}")
             lst_mag_parameter.append(f"{mag_type[0]} {next_b}")
             break
+    return data_frame
+
+def calc_color_only(data_frame, mag_type, mag_col, bins):
+    """"""
+
+    if isinstance(mag_col, tuple):
+        mag = mag_col[0]
+    else:
+        mag = mag_col
+    for idx_b, b in enumerate(bins):
+        if idx_b >= len(bins)-1:
+            break
+        next_b = bins[idx_b+1]
+        data_frame[f"Color {mag_type[1]} {mag_type[0]} {b}-{next_b}"] = data_frame[f"{mag}_{b}"] - data_frame[f"{mag}_{next_b}"]
     return data_frame
 
 
@@ -340,19 +362,24 @@ def yj_inverse_transform_data(data_frame, dict_pt, columns):
 
 
 def mag2flux(magnitude, zero_pt=30):
-    # convert magnitude to flux
-    try:
-        flux = 10**((zero_pt-magnitude)/2.5)
-        return flux
-    except RuntimeWarning:
-        print("Warning")
+    """Convert magnitude to flux."""
+    return 10 ** ((zero_pt - magnitude) / 2.5)
 
 
-def flux2mag(flux, zero_pt=30, clip=0.001):
-    # convert flux to magnitude
-    if clip is None:
-        return zero_pt - 2.5 * np.log10(flux)
-    return zero_pt - 2.5 * np.log10(flux.clip(clip))
+def flux2mag(flux, zero_pt=30, clip=0.001):  # clip=0.001
+    """Convert flux to magnitude, with optional clipping."""
+    if clip is not None:
+        flux = np.clip(flux, clip, None)
+    return zero_pt - 2.5 * np.log10(flux)
+
+def fluxerr2magerr(flux, flux_err):
+    """Convert flux uncertainty to magnitude uncertainty."""
+    return (2.5 / np.log(10)) * (flux_err / flux)
+
+def magerr2fluxerr(mag, mag_err, zero_pt=30):
+    """Convert magnitude uncertainty to flux uncertainty."""
+    flux = mag2flux(mag, zero_pt)
+    return (np.log(10) / 2.5) * flux * mag_err
 
 
 def open_all_balrog_dataset(path_all_balrog_data):
@@ -365,7 +392,7 @@ def open_all_balrog_dataset(path_all_balrog_data):
     return df_balrog
 
 
-def save_balrog_subset(cfg, data_frame, save_name_train, save_name_valid, save_name_test, lst_of_loggers, mock_prefix):
+def save_balrog_subset(cfg, data_frame, save_name_train, save_name_valid, save_name_test, loggers, mock_prefix):
     """"""
 
     assert cfg['SIZE_TRAINING_SET'] + cfg['SIZE_VALIDATION_SET'] + cfg['SIZE_TEST_SET'] == 1
@@ -374,10 +401,9 @@ def save_balrog_subset(cfg, data_frame, save_name_train, save_name_valid, save_n
     df_train, df_temp = train_test_split(data_frame, train_size=cfg['SIZE_TRAINING_SET'])
     df_valid, df_test = train_test_split(df_temp, train_size=valid_test_ratio)
 
-    for log in lst_of_loggers:
-        log.info(f"Save train data as {cfg['PATH_OUTPUT']}/Catalogs/{save_name_train}{mock_prefix} with protocol {cfg['PROTOCOL']}")
-        log.info(f"Save valid data as {cfg['PATH_OUTPUT']}/Catalogs/{save_name_valid}{mock_prefix} with protocol {cfg['PROTOCOL']}")
-        log.info(f"Save test data as {cfg['PATH_OUTPUT']}/Catalogs/{save_name_test}{mock_prefix} with protocol {cfg['PROTOCOL']}")
+    loggers.log_info_stream(f"Save train data as {cfg['PATH_OUTPUT']}/Catalogs/{save_name_train}{mock_prefix} with protocol {cfg['PROTOCOL']}")
+    loggers.log_info_stream(f"Save valid data as {cfg['PATH_OUTPUT']}/Catalogs/{save_name_valid}{mock_prefix} with protocol {cfg['PROTOCOL']}")
+    loggers.log_info_stream(f"Save test data as {cfg['PATH_OUTPUT']}/Catalogs/{save_name_test}{mock_prefix} with protocol {cfg['PROTOCOL']}")
     if cfg['PROTOCOL'] == 2:
         with open(f"{cfg['PATH_OUTPUT']}/Catalogs/{save_name_train}_{len(df_train)}{mock_prefix}.pkl", "wb") as f:
             pickle.dump(df_train.to_dict(), f, protocol=2)
@@ -424,3 +450,37 @@ def get_os():
             return 'Linux'
     else:
         return 'Unknown OS'
+
+
+def get_minmax_df(df, typ):
+    rows = []
+    for k in df.columns:
+        try:
+            mn = df[k].min()
+            mx = df[k].max()
+        except Exception:
+            mn = mx = None
+        rows.append({"Feature": k, "min": mn, "max": mx, "Type": typ})
+    return pd.DataFrame(rows)
+
+def safe_minmax(series):
+    try:
+        # Versuche, alle Werte zu float zu casten (ignoriere fehlende/NaN/None)
+        s = pd.to_numeric(series, errors="coerce")
+        mn = s.min()
+        mx = s.max()
+        # Falls immer noch alles NaN, dann probiere als String
+        if pd.isna(mn):
+            mn = series.min()
+        if pd.isna(mx):
+            mx = series.max()
+    except Exception:
+        mn = series.min()
+        mx = series.max()
+    return mn, mx
+
+def minmax_fmt(val):
+    try:
+        return f"{float(val):.2g}"
+    except Exception:
+        return str(val)

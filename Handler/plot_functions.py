@@ -8,6 +8,7 @@ from natsort import natsorted
 from scipy.stats import gaussian_kde
 from Handler.helper_classes import MidpointNormalize
 import corner
+import math
 
 
 def plot_corner(data_frame, columns, labels, title, ranges=None, show_plot=False, save_plot=False, save_name=None):
@@ -861,3 +862,23 @@ def plot_bin_offset(data_frame, true_column, measured_column, true_magnitude_per
     plt.close()
 
     return bin_stats
+
+
+def plot_subplots(df, columns, filename, title_prefix="", bins=100, logy=True, ncols=4):
+    n_plots = len(columns)
+    nrows = math.ceil(n_plots / ncols)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 3 * nrows))
+    axes = axes.flatten()
+
+    for idx, col in enumerate(columns):
+        ax = axes[idx]
+        sns.histplot(df[col], bins=bins, ax=ax)
+        if logy:
+            ax.set_yscale("log")
+        ax.set_title(f"{title_prefix}{col}")
+
+    for idx in range(n_plots, nrows * ncols):
+        fig.delaxes(axes[idx])
+    plt.tight_layout()
+    plt.savefig(filename, bbox_inches="tight", dpi=300)
+    plt.close(fig)

@@ -125,26 +125,6 @@ def read_catalogs(cfg, lst_of_loggers):
         deep_field = pd.DataFrame(pickle.load(infile, encoding='latin1'))
         # close file
         infile.close()
-        #TODO BDF_T, BDF_T_ERR, BDF_G_0, BDF_G_1 are already in deep_field. so no match needed?!
-        # # Read fits bdf info file
-        # for log in lst_of_loggers:
-        #     log.info(f"Read fits bdf info file")
-        # bdf_info = Table(fitsio.read(cfg["PATH_DATA"]+cfg["FILENAME_BDF_SIZE"]).byteswap().newbyteorder()).to_pandas()
-        #  for log in lst_of_loggers:
-        #     log.info(f"merge deep field and bdf")
-        # df_deep_field = bdf_info.merge(deep_field, left_on='ID', right_on='ID', how='inner')
-        # # Code from Justins script sompz_getready_data_0.py ############################################################
-        # df_deep_field.rename(columns={
-        #     'BDF_T_y': 'BDF_T',
-        #     'BDF_T_ERR_y': 'BDF_T_ERR',
-        #     'BDF_G_0_y': 'BDF_G_0',
-        #     'BDF_G_1_y': 'BDF_G_1',
-        # }, inplace=True)
-        # del df_deep_field['TILENAME']  #h5 doesn't like the TILENAME columns, so removing now
-        # del df_deep_field['BDF_T_x']
-        # del df_deep_field['BDF_T_ERR_x']
-        # del df_deep_field['BDF_G_0_x']
-        # del df_deep_field['BDF_G_1_x']
 
         df_deep_field = deep_field
 
@@ -333,10 +313,10 @@ def merge_catalogs(lst_of_loggers, metacal=None, deep_field=None, detection=None
         log.info(df_merged.isnull().sum())
         log.info(df_merged.isnull().sum().sum())
 
-    df_merged = df_merged[~df_merged['AIRMASS_WMEAN_R'].isnull()]
-    print('Length of merged mcal_detect_df_survey catalog without AIRMASS NANs: {}'.format(len(df_merged)))
-    for log in lst_of_loggers:
-        log.info('Length of merged mcal_detect_df_survey catalog without AIRMASS NANs: {}'.format(len(df_merged)))
+    # df_merged = df_merged[~df_merged['AIRMASS_WMEAN_R'].isnull()]
+    # print('Length of merged mcal_detect_df_survey catalog without AIRMASS NANs: {}'.format(len(df_merged)))
+    # for log in lst_of_loggers:
+    #     log.info('Length of merged mcal_detect_df_survey catalog without AIRMASS NANs: {}'.format(len(df_merged)))
     print(df_merged.isnull().sum())
     print(df_merged.isnull().sum().sum())
     for log in lst_of_loggers:
@@ -453,30 +433,30 @@ def main(cfg):
             lst_of_loggers=lst_of_loggers,
         )
 
-        len_before = len(df_merged)
-        print("Drop defaults")
-        for log in lst_of_loggers:
-            log.info("Drop defaults")
-        if cfg["REPLACE_DEFAULTS"] is True:
-            for col in cfg["DEFAULTS"].keys():
-                print(f"replace defaults drop: col={col} val={cfg['DEFAULTS'][col]}")
-                for log in lst_of_loggers:
-                    log.info(f"replace defaults drop: col={col} val={cfg['DEFAULTS'][col]}")
-                indices_to_drop = df_merged[df_merged[col] == cfg['DEFAULTS'][col]].index
-                df_merged.drop(indices_to_drop, inplace=True)
-            len_after = len(df_merged)
-            for k in df_merged.keys():
-                print(k, df_merged[k].min(), df_merged[k].max())
-            print("Dropped {} rows".format(len_before - len_after))
+        # len_before = len(df_merged)
+        # print("Drop defaults")
+        # for log in lst_of_loggers:
+        #     log.info("Drop defaults")
+        # if cfg["REPLACE_DEFAULTS"] is True:
+        #     for col in cfg["DEFAULTS"].keys():
+        #         print(f"replace defaults drop: col={col} val={cfg['DEFAULTS'][col]}")
+        #         for log in lst_of_loggers:
+        #             log.info(f"replace defaults drop: col={col} val={cfg['DEFAULTS'][col]}")
+        #         indices_to_drop = df_merged[df_merged[col] == cfg['DEFAULTS'][col]].index
+        #         df_merged.drop(indices_to_drop, inplace=True)
+        #     len_after = len(df_merged)
+        #     for k in df_merged.keys():
+        #         print(k, df_merged[k].min(), df_merged[k].max())
+        #     print("Dropped {} rows".format(len_before - len_after))
 
         # Save Data to File
-        # if cfg["SAVE_MERGED_CAT"] is True:
-        #     write_data_2_file(
-        #         cfg=cfg,
-        #         df_generated_data=df_merged,
-        #         save_name=f"{cfg['FILENAME_SAVE_MERGED_CAT']}{len(df_merged)}.pkl",
-        #         lst_of_loggers=lst_of_loggers
-        #     )
+        if cfg["SAVE_MERGED_CAT"] is True:
+            write_data_2_file(
+                cfg=cfg,
+                df_generated_data=df_merged,
+                save_name=f"{cfg['FILENAME_SAVE_MERGED_CAT']}{len(df_merged)}.pkl",
+                lst_of_loggers=lst_of_loggers
+            )
         # if cfg["SAVE_COSMOS"] is True:
         #     write_data_2_file(
         #         cfg=cfg,

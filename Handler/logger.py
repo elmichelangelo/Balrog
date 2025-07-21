@@ -207,3 +207,24 @@ class LoggerHandler:
 
         # return the stream logger
         return stream_logger, stream_error_logger
+
+    def log_info(self, msg):
+        if hasattr(self, "info_logger"):
+            self.info_logger.info(msg)
+
+    def log_error(self, msg):
+        if hasattr(self, "error_logger"):
+            self.error_logger.error(msg)
+
+    def log_debug(self, msg):
+        if hasattr(self, "_debug_logger"):
+            self._debug_logger.debug(msg)
+
+    def log_stream(self, msg):
+        if hasattr(self, "stream_logger"):
+            self.stream_logger.info(msg)
+
+    def log_info_stream(self, msg):
+        if hasattr(self, "info_logger"):
+            self.info_logger.info(msg)
+            self.stream_logger.info(msg)
