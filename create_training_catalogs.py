@@ -47,14 +47,14 @@ def main(cfg):
         df_valid_nf, df_test_nf = train_test_split(df_temp_nf, train_size=valid_test_ratio)
 
         today = datetime.now().strftime("%Y%m%d")
-        start_window_logger.log_info_stream(f"Save flow training data as {cfg['PATH_OUTPUT']}{today}_balrog_train_{len(df_train_nf)}_nf.pkl")
-        df_train_nf.to_pickle(f"{cfg['PATH_OUTPUT']}{today}_balrog_train_{len(df_train_nf)}_nf.pkl")
+        start_window_logger.log_info_stream(f"Save flow training data as {cfg['PATH_OUTPUT']}{today}_balrog_train_{len(df_train_nf)}_nf_drop.pkl")
+        df_train_nf.to_pickle(f"{cfg['PATH_OUTPUT']}{today}_balrog_train_{len(df_train_nf)}_nf_drop.pkl")
 
-        start_window_logger.log_info_stream(f"Save flow validation data as {cfg['PATH_OUTPUT']}{today}_balrog_valid_{len(df_valid_nf)}_nf.pkl")
-        df_valid_nf.to_pickle(f"{cfg['PATH_OUTPUT']}{today}_balrog_valid_{len(df_valid_nf)}_nf.pkl")
+        start_window_logger.log_info_stream(f"Save flow validation data as {cfg['PATH_OUTPUT']}{today}_balrog_valid_{len(df_valid_nf)}_nf_drop.pkl")
+        df_valid_nf.to_pickle(f"{cfg['PATH_OUTPUT']}{today}_balrog_valid_{len(df_valid_nf)}_nf_drop.pkl")
 
-        start_window_logger.log_info_stream(f"Save flow test data as {cfg['PATH_OUTPUT']}{today}_balrog_test_{len(df_test_nf)}_nf.pkl")
-        df_test_nf.to_pickle(f"{cfg['PATH_OUTPUT']}{today}_balrog_test_{len(df_test_nf)}_nf.pkl")
+        start_window_logger.log_info_stream(f"Save flow test data as {cfg['PATH_OUTPUT']}{today}_balrog_test_{len(df_test_nf)}_nf_drop.pkl")
+        df_test_nf.to_pickle(f"{cfg['PATH_OUTPUT']}{today}_balrog_test_{len(df_test_nf)}_nf_drop.pkl")
 
     if cfg["MAKE_CLASSIFIER_CAT"] is True:
         df_balrog_classifier = open_all_balrog_dataset(f"{cfg['PATH_DATA']}/{cfg['FILENAME_CLASSIFIER_TRAINING_CATALOG']}")

@@ -148,17 +148,20 @@ def main(cfg):
     #     df = df_balrog[df_balrog[col] != cfg["DEFAULT_COLUMNS"][col][0]].copy()
     #     print(f"{col}: min={df[col].min()}, max={df[col].max()}")
 
-    for col, _ in cfg.get("REPLACE_NAN", {}).items():
-        mask = df_balrog_detected[col].isna()
-        n = mask.sum()
-        if n > 0:
-            start_window_logger.log_info_stream(f"Replace NaNs in {col} to {-9999.0}")
+    if cfg['DROP_NANS'] is True:
+        df_balrog_detected = df_balrog_detected.dropna()
+    else:
+        for col, _ in cfg.get("REPLACE_NAN", {}).items():
+            mask = df_balrog_detected[col].isna()
+            n = mask.sum()
+            if n > 0:
+                start_window_logger.log_info_stream(f"Replace NaNs in {col} to {-9999.0}")
 
-        df_balrog_detected.loc[mask, col] = -9999.0
+            df_balrog_detected.loc[mask, col] = -9999.0
 
-        df_default_nan[f"{col}_was_nan"] = mask.astype(int)
-        df_default_nan[f"{col}_original_nan_val"] = [np.nan for _ in range(len(df_balrog_detected))]
-        df_default_nan[f"{col}_nan_range"] = [-9999.0 for _ in range(len(df_balrog_detected))]
+            df_default_nan[f"{col}_was_nan"] = mask.astype(int)
+            df_default_nan[f"{col}_original_nan_val"] = [np.nan for _ in range(len(df_balrog_detected))]
+            df_default_nan[f"{col}_nan_range"] = [-9999.0 for _ in range(len(df_balrog_detected))]
 
     if cfg["TEST_TRANSFORMER"] is True:
         df_balrog_detected_trans = df_balrog_detected[df_balrog_detected["AIRMASS_WMEAN_R"]>-9999].copy()
@@ -284,37 +287,41 @@ def main(cfg):
     #     start_window_logger.log_info_stream(f"Default range {col} to min={low}, max={high}")
     #     df_balrog_detected.loc[mask, col] = np.random.uniform(low, high, size=n)
 
-    for col, (default_val, _) in cfg["DEFAULT_COLUMNS"].items():
-        real_vals = df_balrog_detected.loc[df_balrog_detected[col] != default_val, col]
-        std = real_vals.std()
-        min_val = real_vals.min()
-        max_val = real_vals.max()
-        value_range = max_val - min_val
-        epsilon = max(0.01 * value_range, 1e-6)  # mind. ein kleiner Wert, falls alles constant
+    if cfg['DROP_DEFAULT'] is True:
+        df_balrog_detected = df_balrog_detected.replace(-9999, pd.NA)
+        df_balrog_detected = df_balrog_detected.dropna()
+    else:
+        for col, (default_val, _) in cfg["DEFAULT_COLUMNS"].items():
+            real_vals = df_balrog_detected.loc[df_balrog_detected[col] != default_val, col]
+            std = real_vals.std()
+            min_val = real_vals.min()
+            max_val = real_vals.max()
+            value_range = max_val - min_val
+            epsilon = max(0.01 * value_range, 1e-6)  # mind. ein kleiner Wert, falls alles constant
 
-        mask = df_balrog_detected[col] == default_val
-        n = mask.sum()
+            mask = df_balrog_detected[col] == default_val
+            n = mask.sum()
 
-        if default_val < min_val:
-            low = min_val - 2 * epsilon
-            high = min_val - epsilon
-        elif default_val > max_val:
-            low = max_val + epsilon
-            high = max_val + 2 * epsilon
-        else:
-            # Edge-Case: default liegt innerhalb der echten Werte – aber das willst du meist nicht!
-            # Notlösung: auch außerhalb schieben
-            low = min_val - 2 * epsilon
-            high = min_val - epsilon
+            if default_val < min_val:
+                low = min_val - 2 * epsilon
+                high = min_val - epsilon
+            elif default_val > max_val:
+                low = max_val + epsilon
+                high = max_val + 2 * epsilon
+            else:
+                # Edge-Case: default liegt innerhalb der echten Werte – aber das willst du meist nicht!
+                # Notlösung: auch außerhalb schieben
+                low = min_val - 2 * epsilon
+                high = min_val - epsilon
 
-        df_balrog_detected.loc[mask, col] = np.random.uniform(low, high, size=n)
+            df_balrog_detected.loc[mask, col] = np.random.uniform(low, high, size=n)
 
-        df_default_nan["bal_id"] = df_balrog_detected["bal_id"]
-        df_default_nan[f"{col}_is_default"] = mask.astype(int)
-        df_default_nan[f"{col}_original_default_val"] = [default_val for _ in range(len(df_balrog_detected))]
-        df_default_nan[f"{col}_default_range"] = [[low, high] for _ in range(len(df_balrog_detected))]
+            df_default_nan["bal_id"] = df_balrog_detected["bal_id"]
+            df_default_nan[f"{col}_is_default"] = mask.astype(int)
+            df_default_nan[f"{col}_original_default_val"] = [default_val for _ in range(len(df_balrog_detected))]
+            df_default_nan[f"{col}_default_range"] = [[low, high] for _ in range(len(df_balrog_detected))]
 
-        start_window_logger.log_info_stream(f"{col}: default_range=({low},{high})")
+            start_window_logger.log_info_stream(f"{col}: default_range=({low},{high})")
 
     print("After replace Defaults")
 
@@ -408,14 +415,14 @@ def main(cfg):
 
     today = datetime.now().strftime("%Y%m%d")
 
-    start_window_logger.log_info_stream(f"Save training dataset as {today}_balrog_training_{len(df_training_balrog)}_nf.pkl")
-    df_training_balrog.to_pickle(f"{cfg['PATH_OUTPUT']}/{today}_balrog_training_{len(df_training_balrog)}_nf.pkl")
+    start_window_logger.log_info_stream(f"Save training dataset as {today}_balrog_training_{len(df_training_balrog)}_nf_drop.pkl")
+    df_training_balrog.to_pickle(f"{cfg['PATH_OUTPUT']}/{today}_balrog_training_{len(df_training_balrog)}_nf_drop.pkl")
 
-    start_window_logger.log_info_stream(f"Save flag dataset as {today}_balrog_flag_{len(df_flag_balrog)}_nf.pkl")
-    df_flag_balrog.to_pickle(f"{cfg['PATH_OUTPUT']}/{today}_balrog_flag_{len(df_flag_balrog)}_nf.pkl")
+    start_window_logger.log_info_stream(f"Save flag dataset as {today}_balrog_flag_{len(df_flag_balrog)}_nf_drop.pkl")
+    df_flag_balrog.to_pickle(f"{cfg['PATH_OUTPUT']}/{today}_balrog_flag_{len(df_flag_balrog)}_nf_drop.pkl")
 
-    start_window_logger.log_info_stream(f"Save default dataset as {today}_balrog_default_nan_nf.pkl")
-    df_default_nan.to_pickle(f"{cfg['PATH_OUTPUT']}/{today}_balrog_default_nan_nf.pkl")
+    start_window_logger.log_info_stream(f"Save default dataset as {today}_balrog_default_nan_nf_drop.pkl")
+    df_default_nan.to_pickle(f"{cfg['PATH_OUTPUT']}/{today}_balrog_default_nan_nf_drop.pkl")
 
 if __name__ == '__main__':
     pd.set_option("display.max_columns", None)

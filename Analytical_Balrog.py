@@ -74,7 +74,7 @@ def data_preprocessing(cfg):
     plt.legend()
     plt.show()
 
-    df_balrog_cut = apply_cuts(cfg=cfg, data_frame=df_balrog)
+    df_balrog_cut = apply_cuts(cfg=cfg, data_frame=df_balrog.copy())
 
     sns.histplot(
         x=df_balrog_cut["unsheared/flux_r"].values,
