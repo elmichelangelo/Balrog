@@ -88,6 +88,9 @@ def main(cfg):
         start_window_logger.log_info_stream("Load Flow Catalog")
         df_balrog_flow = open_all_balrog_dataset(f"{cfg['PATH_DATA']}/{cfg['FILENAME_FLOW_TRAINING_CATALOG']}")
 
+        for band in ["r", "i", "z"]:
+            df_balrog_flow[f"unsheared/mag_err_{band}"] = np.log10(df_balrog_flow[f"unsheared/mag_err_{band}"])
+
         start_window_logger.log_info_stream("Get Scaler FLow")
         dict_scalers_standard_nf, data_frame_nf_scaled = get_scaler(
             cfg=cfg,

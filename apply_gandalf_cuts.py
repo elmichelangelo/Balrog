@@ -3,7 +3,7 @@ import pandas as pd
 
 from Handler import *
 from Handler.helper_functions import *
-from Handler.cut_functions import apply_gandalf_cuts, apply_cuts
+from Handler.cut_functions import apply_gandalf_cuts, apply_cuts, apply_gatti_cuts
 from scipy.stats.mstats import winsorize
 from sklearn.preprocessing import PowerTransformer, StandardScaler
 from scipy.stats import mstats
@@ -58,67 +58,32 @@ def main(cfg):
     df_balrog = open_all_balrog_dataset(f"{cfg['PATH_DATA']}/{cfg['FILENAME_MERGED_CAT']}")
     df_balrog = df_balrog[df_balrog["detected"] == 1]
 
-
-    df_balrog = calc_mag(
+    print(f"Length Balrog w/o cuts:", len(df_balrog))
+    start_window_logger.log_info_stream("Calc measured mag and color")
+    df_balrog = calc_color(
         cfg=cfg,
         data_frame=df_balrog,
+        mag_type=("MAG", "unsheared"),
         flux_col=("unsheared/flux", "unsheared/flux_err"),
         mag_col=("unsheared/mag", "unsheared/mag_err"),
-        bins=cfg['UNSHEARED_BINS']
+        bins=cfg['UNSHEARED_BINS'],
+        save_name=f"unsheared/mag"
     )
+
     df_balrog = apply_gandalf_cuts(
         cfg=cfg,
         data_frame=df_balrog
     )
 
     if cfg["DO_SOME_TESTS"] is True:
+        for k in cfg["OUTPUT_COLUMNS"]:
+            print(k, df_balrog[k].isna().sum())
         plot_feature_histograms(
             cfg=cfg,
             df=df_balrog,
             columns=cfg["OUTPUT_COLUMNS"],
-            title="Applying only flags_foreground == 0, Shear CUts and Mag Cuts",
-            save_name=f"flags_foreground_shear_mag_cuts"
-        )
-        exit()
-
-        df_balrog_true_cuts = open_all_balrog_dataset(f"{cfg['PATH_DATA']}/{cfg['FILENAME_MERGED_CAT']}")
-        df_balrog_no_cuts = df_balrog_true_cuts.copy()
-
-        df_balrog_no_cuts = calc_mag(
-            cfg=cfg,
-            data_frame=df_balrog_no_cuts,
-            flux_col=("unsheared/flux", "unsheared/flux_err"),
-            mag_col=("unsheared/mag", "unsheared/mag_err"),
-            bins=cfg['UNSHEARED_BINS']
-        )
-
-        df_balrog_true_cuts = calc_mag(
-            cfg=cfg,
-            data_frame=df_balrog_true_cuts,
-            flux_col=("unsheared/flux", "unsheared/flux_err"),
-            mag_col=("unsheared/mag", "unsheared/mag_err"),
-            bins=cfg['UNSHEARED_BINS']
-        )
-
-        df_balrog_true_cuts = apply_cuts(
-            cfg=cfg,
-            data_frame=df_balrog_true_cuts
-        )
-
-        plot_feature_histograms(
-            cfg=cfg,
-            df=df_balrog_no_cuts,
-            columns=cfg["OUTPUT_COLUMNS"],
-            title="Output Features w/o Cuts",
-            save_name=f"ouput_features_no_cuts"
-        )
-
-        plot_feature_histograms(
-            cfg=cfg,
-            df=df_balrog_true_cuts,
-            columns=cfg["OUTPUT_COLUMNS"],
-            title="Output Features True Cuts",
-            save_name=f"ouput_features_true_cuts"
+            title="Applying the gandalf et al. Cuts",
+            save_name=f"after_applying_gandalf_cuts"
         )
 
     df_balrog.rename(
@@ -140,33 +105,35 @@ def main(cfg):
     df_balrog = calc_color(
         cfg=cfg,
         data_frame=df_balrog,
-        mag_type=("LUPT", "BDF"),
+        mag_type=("MAG", "BDF"),
         flux_col=("BDF_FLUX_DERED_CALIB", "BDF_FLUX_ERR_DERED_CALIB"),
-        mag_col=("BDF_LUPT_DERED_CALIB", "BDF_LUPT_ERR_DERED_CALIB"),
+        mag_col=("BDF_MAG_DERED_CALIB", "BDF_MAG_ERR_DERED_CALIB"),
         bins=cfg['BDF_BINS'],
-        save_name=f"bdf_lupt"
+        save_name=f"bdf_mag"
     )
-    start_window_logger.log_info_stream("Calc measured lupt and color")
-    df_balrog = calc_color(
-        cfg=cfg,
-        data_frame=df_balrog,
-        mag_type=("LUPT", "unsheared"),
-        flux_col=("unsheared/flux", "unsheared/flux_err"),
-        mag_col=("unsheared/lupt", "unsheared/lupt_err"),
-        bins=cfg['UNSHEARED_BINS'],
-        save_name=f"unsheared/lupt"
-    )
+
+    if cfg["DO_SOME_TESTS"] is True:
+        for k in cfg["INPUT_COLUMNS"]:
+            print(k, df_balrog[k].isna().sum())
+        plot_feature_histograms(
+            cfg=cfg,
+            df=df_balrog,
+            columns=cfg["INPUT_COLUMNS"],
+            title="Applying the WL Cuts",
+            save_name=f"after_applying_cuts"
+        )
+        len(df_balrog)
 
     df_training_balrog = df_balrog[cfg["TRAINING_COLUMNS"]].copy()
     df_flag_balrog = df_balrog[cfg["FLAG_COLUMNS"]].copy()
 
     today = datetime.now().strftime("%Y%m%d")
 
-    start_window_logger.log_info_stream(f"Save training dataset as {today}_balrog_training_{len(df_training_balrog)}_nf_gcut.pkl")
-    df_training_balrog.to_pickle(f"{cfg['PATH_OUTPUT']}/{today}_balrog_training_{len(df_training_balrog)}_nf_gcut.pkl")
+    start_window_logger.log_info_stream(f"Save training dataset as {today}_balrog_training_{len(df_training_balrog)}_nf.pkl")
+    df_training_balrog.to_pickle(f"{cfg['PATH_OUTPUT']}/{today}_balrog_training_{len(df_training_balrog)}_nf.pkl")
 
-    start_window_logger.log_info_stream(f"Save flag dataset as {today}_balrog_flag_{len(df_flag_balrog)}_nf_gcut.pkl")
-    df_flag_balrog.to_pickle(f"{cfg['PATH_OUTPUT']}/{today}_balrog_flag_{len(df_flag_balrog)}_nf_gcut.pkl")
+    start_window_logger.log_info_stream(f"Save flag dataset as {today}_balrog_flag_{len(df_flag_balrog)}_nf.pkl")
+    df_flag_balrog.to_pickle(f"{cfg['PATH_OUTPUT']}/{today}_balrog_flag_{len(df_flag_balrog)}_nf.pkl")
 
 if __name__ == '__main__':
     pd.set_option("display.max_columns", None)

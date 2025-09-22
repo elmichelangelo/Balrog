@@ -195,7 +195,7 @@ def luptize_inverse_fluxes(data_frame, flux_col, lupt_col, bins):
 
     :param bins: ["I", "R", "Z", "J", "H", "K"]
     :param data_frame:
-    :param flux_col: ("BDF_FLUX_DERED_CALIB_I", "BDF_FLUX_ERR_DERED_CALIB_I")
+    :param flux_col: ("BDF_FLUX_DERED_CALIB", "BDF_FLUX_ERR_DERED_CALIB")
     :param lupt_col: ("BDF_LUPT_DERED_CALIB", "BDF_LUPT_ERR_DERED_CALIB")
     :return:
     """
