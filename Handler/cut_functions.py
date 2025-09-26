@@ -17,7 +17,7 @@ def unsheared_object_cuts(data_frame, prob=False):
 def unsheared_object_cuts_gandalf(data_frame):
     """"""
     print("Apply unsheared object cuts")
-    cuts = (data_frame["unsheared/extended_class_sof"] >= 2) & (data_frame["unsheared/flags_gold"] < 8)
+    cuts = (data_frame["unsheared/flags_gold"] < 8)
     data_frame = data_frame[cuts]
     print('Length of catalog after applying unsheared object cuts: {}'.format(len(data_frame)))
     return data_frame
@@ -50,10 +50,13 @@ def flag_cuts(data_frame, prob=False):
 def flag_cuts_gandalf(data_frame):
     """"""
     print("Apply flag cuts")
-    cuts = (data_frame["match_flag_1.5_asec"] < 2) & \
-           (data_frame["flags_foreground"] == 0) & \
-           (data_frame["flags_badregions"] < 2) & \
-           (data_frame["flags_footprint"] == 1)
+    # cuts = (data_frame["match_flag_1.5_asec"] < 2) & \
+    #        (data_frame["flags_foreground"] == 0) & \
+    #        (data_frame["flags_badregions"] < 2) & \
+    #        (data_frame["flags_footprint"] == 1)
+
+    cuts = (data_frame["flags_foreground"] == 0) & \
+           (data_frame["flags_badregions"] < 2)
 
     data_frame = data_frame[cuts]
     print('Length of catalog after applying flag cuts: {}'.format(len(data_frame)))

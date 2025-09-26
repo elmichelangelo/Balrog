@@ -29,7 +29,7 @@ def plot_feature_histograms(df, columns, title, save_name, bins=100):
     plt.savefig(save_name, dpi=300, bbox_inches='tight')
 
 
-def get_scaler(cfg, lst_columns_of_interest, log_scaler, data_frame):
+def get_scaler(lst_columns_of_interest, log_scaler, data_frame):
     dict_sscaler = {}
     log_scaler.log_info_stream("Get scaler")
     data_frame_scaled = data_frame.copy()
@@ -38,20 +38,6 @@ def get_scaler(cfg, lst_columns_of_interest, log_scaler, data_frame):
         log_scaler.log_info_stream(f"Get scaler for {col}")
         sscaler = StandardScaler()
         value = data_frame[col].values
-        if cfg["APPLY_LOG1P"] is True:
-            if col in cfg["COLUMNS_LOG1P"]:
-                n_too_small = np.sum(value < -1)
-                n_nan = np.sum(np.isnan(value))
-                if n_too_small > 0 or n_nan > 0:
-                    log_scaler.log_info_stream(
-                        f"LOG1P PROBLEM in '{col}': {n_too_small} Werte < -1, {n_nan} NaNs! (min={np.nanmin(value)}, max={np.nanmax(value)})"
-                    )
-                    idx_bad = np.where(value < -1)[0]
-                    if len(idx_bad) > 0:
-                        log_scaler.log_info_stream(f"Betroffene Indizes in '{col}': {idx_bad[:10]}{' ...' if len(idx_bad) > 10 else ''}")
-
-                value = np.log1p(value)
-
         data_frame_scaled[col]= sscaler.fit_transform(value.reshape(-1, 1))
         dict_sscaler[col] = sscaler
     return dict_sscaler, data_frame_scaled
@@ -93,7 +79,6 @@ def main(cfg):
 
         start_window_logger.log_info_stream("Get Scaler FLow")
         dict_scalers_standard_nf, data_frame_nf_scaled = get_scaler(
-            cfg=cfg,
             lst_columns_of_interest=cfg["NF_COLUMNS_OF_INTEREST"],
             log_scaler=start_window_logger,
             data_frame=df_balrog_flow
@@ -126,30 +111,24 @@ def main(cfg):
 
         start_window_logger.log_info_stream("Get Scaler Classifier")
         dict_scalers_standard_classifier, data_frame_classifier_scaled = get_scaler(
-            cfg=cfg,
             lst_columns_of_interest=cfg["CLASSIFIER_COLUMNS_OF_INTEREST"],
             log_scaler=start_window_logger,
             data_frame=df_balrog_classifier
 
         )
+
         if cfg["PLOT_DATA"] is True:
+            os.makedirs(cfg['PATH_OUTPUT'], exist_ok=True)
             plot_feature_histograms(
                 df=data_frame_classifier_scaled,
-                columns=cfg["INPUT_COLUMNS"],
+                columns=cfg["CLASSIFIER_COLUMNS_OF_INTEREST"],
                 title=f"Standard Scaled Input Features",
                 save_name=f"{cfg['PATH_PLOTS']}/{today}_scaled_input_features_classifier.pdf",
                 bins=100
             )
 
-            plot_feature_histograms(
-                df=data_frame_classifier_scaled,
-                columns=cfg["OUTPUT_COLUMNS"],
-                title=f"Standard Scaled Output Features",
-                save_name=f"{cfg['PATH_PLOTS']}/{today}_scaled_output_features_classifier.pdf",
-                bins=100
-            )
-        start_window_logger.log_info_stream(f"Save classifier standard scaler as {cfg['PATH_OUTPUT']}{today}_StandardScalers_classifier.pkl")
-        joblib.dump(dict_scalers_standard_classifier, f"{cfg['PATH_OUTPUT']}{today}_StandardScalers_classifier.pkl")
+        start_window_logger.log_info_stream(f"Save classifier standard scaler as {cfg['PATH_OUTPUT']}/{today}_StandardScalers_classifier.pkl")
+        joblib.dump(dict_scalers_standard_classifier, f"{cfg['PATH_OUTPUT']}/{today}_StandardScalers_classifier.pkl")
 
 
 if __name__ == '__main__':
