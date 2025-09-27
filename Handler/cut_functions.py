@@ -17,7 +17,7 @@ def unsheared_object_cuts(data_frame, prob=False):
 def unsheared_object_cuts_gandalf(data_frame):
     """"""
     print("Apply unsheared object cuts")
-    cuts = (data_frame["unsheared/flags_gold"] < 8)
+    cuts = (data_frame["unsheared/extended_class_sof"] >= 2) & (data_frame["unsheared/flags_gold"] < 2)
     data_frame = data_frame[cuts]
     print('Length of catalog after applying unsheared object cuts: {}'.format(len(data_frame)))
     return data_frame
@@ -50,13 +50,10 @@ def flag_cuts(data_frame, prob=False):
 def flag_cuts_gandalf(data_frame):
     """"""
     print("Apply flag cuts")
-    # cuts = (data_frame["match_flag_1.5_asec"] < 2) & \
-    #        (data_frame["flags_foreground"] == 0) & \
-    #        (data_frame["flags_badregions"] < 2) & \
-    #        (data_frame["flags_footprint"] == 1)
-
-    cuts = (data_frame["flags_foreground"] == 0) & \
-           (data_frame["flags_badregions"] < 2)
+    cuts = (data_frame["match_flag_1.5_asec"] < 2) & \
+           (data_frame["flags_foreground"] == 0) & \
+           (data_frame["flags_badregions"] < 2) & \
+           (data_frame["flags_footprint"] == 1)
 
     data_frame = data_frame[cuts]
     print('Length of catalog after applying flag cuts: {}'.format(len(data_frame)))
@@ -237,13 +234,13 @@ def binary_cut_gandalf(data_frame):
     highe_cut = np.greater(np.sqrt(np.power(data_frame['unsheared/e_1'], 2.) + np.power(data_frame['unsheared/e_2'], 2)), 0.8)
     c = 22.5
     m = 2.5
-    magT_cut = np.log10(data_frame['unsheared/T']) < (c - flux2mag(data_frame['unsheared/flux_r'])) / m
+    magT_cut = np.log10(data_frame['unsheared/T']) < (c - data_frame['unsheared/mag_r']) / m
     binaries = highe_cut * magT_cut
 
     print("perform binaries cut")
     data_frame = data_frame[~binaries]
 
-    print('len w/ binaries', len(data_frame))
+    print('len w/o binaries', len(data_frame))
     return data_frame
 
 def binary_cut_gatti(data_frame):
@@ -350,14 +347,23 @@ def apply_cuts(cfg, data_frame, flag_cat="", merge_with_flag=False):
     return df_merged
 
 
-def apply_gandalf_cuts(cfg, data_frame, flag_cat="", merge_with_flag=False):
+def apply_galaxy_cuts(data_frame, flag_cat="", merge_with_flag=False):
+    """"""
+    if merge_with_flag is True:
+        df_merged = pd.merge(data_frame, flag_cat, on='bal_id', how='left')
+    else:
+        df_merged = data_frame
+    df_merged = flag_cuts_gandalf(data_frame=df_merged)
+    return df_merged
+
+
+def apply_photometric_cuts(cfg, data_frame, flag_cat="", merge_with_flag=False):
     """"""
     if merge_with_flag is True:
         df_merged = pd.merge(data_frame, flag_cat, on='bal_id', how='left')
     else:
         df_merged = data_frame
     df_merged = unsheared_object_cuts_gandalf(data_frame=df_merged)
-    df_merged = flag_cuts_gandalf(data_frame=df_merged)
     df_merged = unsheared_shear_cuts_gandalf(data_frame=df_merged)
     df_merged = binary_cut_gandalf(data_frame=df_merged)
     df_merged = mask_cut_healpy_gandalf(

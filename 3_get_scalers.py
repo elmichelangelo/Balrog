@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 from Handler import *
 from Handler.helper_functions import *
 from sklearn.preprocessing import StandardScaler
@@ -10,7 +9,7 @@ import argparse
 import joblib
 
 
-def plot_feature_histograms(df, columns, title, save_name, bins=100):
+def plot_feature_histograms(cfg, df, columns, title, save_name, bins=100):
     n = len(columns)
     ncols = min(4, n)
     nrows = int(np.ceil(n / ncols))
@@ -22,11 +21,17 @@ def plot_feature_histograms(df, columns, title, save_name, bins=100):
         sns.histplot(df[col], bins=bins, ax=ax)
         ax.set_title(col)
         ax.set_yscale("log")
-        ax.set_xlabel(col)
+        if col in ["unsheared/mag_err_r", "unsheared/mag_err_i", "unsheared/mag_err_z"]:
+            ax.set_xlabel(f"log10({col})")
+        else:
+            ax.set_xlabel(col)
     for j in range(i + 1, len(axes)):
         axes[j].axis('off')
     fig.suptitle(title)
-    plt.savefig(save_name, dpi=300, bbox_inches='tight')
+    if cfg['SAVE_PLOT'] is True:
+        plt.savefig(save_name, bbox_inches='tight', dpi=300)
+    if cfg['SHOW_PLOT'] is True:
+        plt.show()
 
 
 def get_scaler(lst_columns_of_interest, log_scaler, data_frame):
@@ -72,7 +77,7 @@ def main(cfg):
 
     if cfg["GET_FLOW_SCALER"] is True:
         start_window_logger.log_info_stream("Load Flow Catalog")
-        df_balrog_flow = open_all_balrog_dataset(f"{cfg['PATH_DATA']}/{cfg['FILENAME_FLOW_TRAINING_CATALOG']}")
+        df_balrog_flow = open_all_balrog_dataset(f"{cfg['PATH_DATA']}/{cfg['FILENAME_NF_CATALOG']}")
 
         for band in ["r", "i", "z"]:
             df_balrog_flow[f"unsheared/mag_err_{band}"] = np.log10(df_balrog_flow[f"unsheared/mag_err_{band}"])
@@ -85,56 +90,63 @@ def main(cfg):
         )
 
         if cfg["PLOT_DATA"] is True:
+            os.makedirs(cfg['PATH_PLOTS'], exist_ok=True)
             plot_feature_histograms(
+                cfg=cfg,
                 df=data_frame_nf_scaled,
-                columns=cfg["INPUT_COLUMNS"],
+                columns=cfg["NF_INPUT_COLUMNS"],
                 title=f"Standard Scaled Input Features",
                 save_name=f"{cfg['PATH_PLOTS']}/{today}_scaled_input_features_nf.pdf",
                 bins=100
             )
-
             plot_feature_histograms(
+                cfg=cfg,
                 df=data_frame_nf_scaled,
-                columns=cfg["OUTPUT_COLUMNS"],
+                columns=cfg["NF_OUTPUT_COLUMNS"],
                 title=f"Standard Scaled Output Features",
                 save_name=f"{cfg['PATH_PLOTS']}/{today}_scaled_output_features_nf.pdf",
                 bins=100
             )
+
         if cfg["SAVE_SCALER"] is True:
+            os.makedirs(cfg['PATH_OUTPUT'], exist_ok=True)
             start_window_logger.log_info_stream(f"Save nf standard scaler as {cfg['PATH_OUTPUT']}{today}_StandardScalers_nf.pkl")
             joblib.dump(dict_scalers_standard_nf, f"{cfg['PATH_OUTPUT']}{today}_StandardScalers_nf.pkl")
 
 
     if cfg["GET_CLASSIFIER_SCALER"] is True:
         start_window_logger.log_info_stream("Load Classifier Catalog")
-        df_balrog_classifier = open_all_balrog_dataset(f"{cfg['PATH_DATA']}/{cfg['FILENAME_CLASSIFIER_TRAINING_CATALOG']}")
+        df_balrog_classifier = open_all_balrog_dataset(f"{cfg['PATH_DATA']}/{cfg['FILENAME_CF_CATALOG']}")
 
         start_window_logger.log_info_stream("Get Scaler Classifier")
         dict_scalers_standard_classifier, data_frame_classifier_scaled = get_scaler(
-            lst_columns_of_interest=cfg["CLASSIFIER_COLUMNS_OF_INTEREST"],
+            lst_columns_of_interest=cfg["CF_COLUMNS_OF_INTEREST"],
             log_scaler=start_window_logger,
             data_frame=df_balrog_classifier
 
         )
 
         if cfg["PLOT_DATA"] is True:
-            os.makedirs(cfg['PATH_OUTPUT'], exist_ok=True)
+            os.makedirs(cfg['PATH_PLOTS'], exist_ok=True)
             plot_feature_histograms(
+                cfg=cfg,
                 df=data_frame_classifier_scaled,
-                columns=cfg["CLASSIFIER_COLUMNS_OF_INTEREST"],
+                columns=cfg["CF_INPUT_COLUMNS"],
                 title=f"Standard Scaled Input Features",
-                save_name=f"{cfg['PATH_PLOTS']}/{today}_scaled_input_features_classifier.pdf",
+                save_name=f"{cfg['PATH_PLOTS']}/{today}_scaled_input_features_cf.pdf",
                 bins=100
             )
 
-        start_window_logger.log_info_stream(f"Save classifier standard scaler as {cfg['PATH_OUTPUT']}/{today}_StandardScalers_classifier.pkl")
-        joblib.dump(dict_scalers_standard_classifier, f"{cfg['PATH_OUTPUT']}/{today}_StandardScalers_classifier.pkl")
+        if cfg["SAVE_SCALER"] is True:
+            os.makedirs(cfg['PATH_OUTPUT'], exist_ok=True)
+            start_window_logger.log_info_stream(f"Save classifier standard scaler as {cfg['PATH_OUTPUT']}/{today}_StandardScalers_cf.pkl")
+            joblib.dump(dict_scalers_standard_classifier, f"{cfg['PATH_OUTPUT']}/{today}_StandardScalers_cf.pkl")
 
 
 if __name__ == '__main__':
     sys.path.append(os.path.dirname(__file__))
     path = os.path.abspath(sys.path[-1])
-    config_file_name = "mac_get_scaler_minmax.cfg"
+    config_file_name = "mac_get_scaler.cfg"
 
     parser = argparse.ArgumentParser(description='Start get scaler minmax')
     parser.add_argument(

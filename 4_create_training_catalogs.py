@@ -1,5 +1,3 @@
-import matplotlib.pyplot as plt
-
 from Handler import *
 from Handler.helper_functions import *
 from datetime import datetime
@@ -36,7 +34,7 @@ def main(cfg):
     # Write status to logger
     start_window_logger.log_info_stream("Start training catalogs")
 
-    df_balrog_classifier = open_all_balrog_dataset(f"{cfg['PATH_DATA']}/{cfg['FILENAME_CLASSIFIER_TRAINING_CATALOG']}")
+    df_balrog_classifier = open_all_balrog_dataset(f"{cfg['PATH_DATA']}/{cfg['FILENAME_CF_CATALOG']}")
 
     start_window_logger.log_info_stream(f"Split classifier data train {cfg['SIZE_TRAINING_SET']} validation {cfg['SIZE_VALIDATION_SET']} test {cfg['SIZE_TEST_SET']}")
     assert cfg['SIZE_TRAINING_SET'] + cfg['SIZE_VALIDATION_SET'] + cfg['SIZE_TEST_SET'] == 1
@@ -59,20 +57,14 @@ def main(cfg):
     ids_val = set(df_valid_cf['bal_id'])
     ids_test = set(df_test_cf['bal_id'])
 
-    df_balrog_flow = open_all_balrog_dataset(f"{cfg['PATH_DATA']}/{cfg['FILENAME_FLOW_TRAINING_CATALOG']}")
+    df_balrog_flow = open_all_balrog_dataset(f"{cfg['PATH_DATA']}/{cfg['FILENAME_NF_CATALOG']}")
 
     start_window_logger.log_info_stream(f"Split flow data train {cfg['SIZE_TRAINING_SET']} validation {cfg['SIZE_VALIDATION_SET']} test {cfg['SIZE_TEST_SET']}")
-    # assert cfg['SIZE_TRAINING_SET'] + cfg['SIZE_VALIDATION_SET'] + cfg['SIZE_TEST_SET'] == 1
-    # valid_test_ratio = cfg['SIZE_VALIDATION_SET'] / (cfg['SIZE_VALIDATION_SET'] + cfg['SIZE_TEST_SET'])
-    #
-    # df_train_nf, df_temp_nf = train_test_split(df_balrog_flow, train_size=cfg['SIZE_TRAINING_SET'])
-    # df_valid_nf, df_test_nf = train_test_split(df_temp_nf, train_size=valid_test_ratio)
 
     df_train_nf = df_balrog_flow[df_balrog_flow['bal_id'].isin(ids_train) & (df_balrog_flow['detected'] == 1)]
     df_valid_nf = df_balrog_flow[df_balrog_flow['bal_id'].isin(ids_val) & (df_balrog_flow['detected'] == 1)]
     df_test_nf = df_balrog_flow[df_balrog_flow['bal_id'].isin(ids_test) & (df_balrog_flow['detected'] == 1)]
 
-    today = datetime.now().strftime("%Y%m%d")
     start_window_logger.log_info_stream(f"Save flow training data as {cfg['PATH_OUTPUT']}{today}_balrog_train_{len(df_train_nf)}_nf.pkl")
     df_train_nf.to_pickle(f"{cfg['PATH_OUTPUT']}{today}_balrog_train_{len(df_train_nf)}_nf.pkl")
 
