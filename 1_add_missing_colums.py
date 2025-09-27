@@ -1,12 +1,5 @@
-import matplotlib.pyplot as plt
-import pandas as pd
-
 from Handler import *
 from Handler.helper_functions import *
-from Handler.cut_functions import apply_cuts
-from scipy.stats.mstats import winsorize
-from sklearn.preprocessing import PowerTransformer, StandardScaler
-from scipy.stats import mstats
 from datetime import datetime
 import sys
 import os
@@ -30,7 +23,10 @@ def plot_feature_histograms(cfg, df, columns, title, save_name, bins=100):
     for j in range(i + 1, len(axes)):
         axes[j].axis('off')
     fig.suptitle(title)
-    plt.savefig(f"{cfg['PATH_PLOTS']}/{save_name}.pdf", bbox_inches='tight', dpi=300)
+    if cfg['SAVE_PLOT'] is True:
+        plt.savefig(save_name, bbox_inches='tight', dpi=300)
+    if cfg['SHOW_PLOT'] is True:
+        plt.show()
 
 
 def main(cfg):
@@ -72,7 +68,7 @@ def main(cfg):
     start_window_logger.log_info_stream(f"Total number of NaNs: {df_balrog.isna().sum().sum()}")
     start_window_logger.log_info_stream(f"length of Balrog objects {len(df_balrog)}")
 
-    start_window_logger.log_info_stream("Calc bdf lupt and color")
+    start_window_logger.log_info_stream("Calc bdf mag and color")
     df_balrog = calc_color(
         cfg=cfg,
         data_frame=df_balrog,
@@ -82,24 +78,48 @@ def main(cfg):
         bins=cfg['BDF_BINS'],
         save_name=f"bdf_mag"
     )
-
-    df_training_balrog = df_balrog[cfg["TRAINING_COLUMNS"]].copy()
-    # df_flag_balrog = df_balrog[cfg["FLAG_COLUMNS"]].copy()
+    df_balrog = calc_color(
+        cfg=cfg,
+        data_frame=df_balrog,
+        mag_type=("MAG", "unsheared"),
+        flux_col=("unsheared/flux", "unsheared/flux_err"),
+        mag_col=("unsheared/mag", "unsheared/mag_err"),
+        bins=cfg['UNSHEARED_BINS'],
+        save_name=f"unsheared/mag"
+    )
 
     today = datetime.now().strftime("%Y%m%d")
 
-    start_window_logger.log_info_stream(f"Save training dataset as {today}_balrog_training_{len(df_training_balrog)}_classifier.pkl")
-    df_training_balrog.to_pickle(f"{cfg['PATH_OUTPUT']}/{today}_balrog_training_{len(df_training_balrog)}_classifier.pkl")
+    if cfg["PLOT_DATA"] is True:
+        os.makedirs(cfg["PATH_PLOTS"], exist_ok=True)
+        plot_feature_histograms(
+            cfg=cfg,
+            df=df_balrog,
+            columns=cfg["CF_INPUT_COLUMNS"],
+            title=f"Classifier input features w/o cuts",
+            save_name=f"{cfg['PATH_PLOTS']}/{today}_cf_input_features_w-o_cuts.pdf",
+            bins=100
+        )
+        plot_feature_histograms(
+            cfg=cfg,
+            df=df_balrog,
+            columns=cfg["NF_OUTPUT_COLUMNS"],
+            title=f"Normalizing FLow input features w/o cuts",
+            save_name=f"{cfg['PATH_PLOTS']}/{today}_nf_input_features_w-o_cuts.pdf",
+            bins=100
+        )
 
-    # start_window_logger.log_info_stream(f"Save flag dataset as {today}_balrog_flag_{len(df_flag_balrog)}_nf_drop.pkl")
-    # df_flag_balrog.to_pickle(f"{cfg['PATH_OUTPUT']}/{today}_balrog_flag_{len(df_flag_balrog)}_nf_drop.pkl")
+    os.makedirs(cfg["PATH_OUTPUT"], exist_ok=True)
+
+    start_window_logger.log_info_stream(f"Save complete dataset as {today}_balrog_complete_{len(df_balrog)}.pkl")
+    df_balrog.to_pickle(f"{cfg['PATH_OUTPUT']}/{today}_balrog_complete_{len(df_balrog)}.pkl")
 
 if __name__ == '__main__':
     pd.set_option("display.max_columns", None)
     pd.set_option("display.width", None)
     sys.path.append(os.path.dirname(__file__))
     path = os.path.abspath(sys.path[-1])
-    config_file_name = "mac_add_missing_columns_classifier.cfg"
+    config_file_name = "mac_add_missing_columns.cfg"
 
     parser = argparse.ArgumentParser(description="'Start 'add missing columns'")
     parser.add_argument(
